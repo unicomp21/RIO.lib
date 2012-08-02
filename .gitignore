@@ -1,3 +1,4 @@
+*~
 *.opensdf
 *.sdf
 *.ipch
@@ -6,3 +7,5 @@
 */Release/*
 Debug/*
 Release/*
+*/x64/*/*
+
