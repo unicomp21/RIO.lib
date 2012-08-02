@@ -1,4 +1,5 @@
 #pragma once
+#include <WinSock2.h>
 #include <Windows.h>
 
 ////////////////////////////////
@@ -68,3 +69,24 @@ public:
 	}
 };
 
+//////////////////
+class TSocketTcp {
+private:
+	SOCKET hSocket;
+public:
+	TSocketTcp() : hSocket(NULL) {
+		hSocket = ::WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP,
+			NULL, 0, WSA_FLAG_OVERLAPPED);
+		Verify(INVALID_SOCKET != hSocket);
+	}
+public:
+	operator HANDLE() { return reinterpret_cast<HANDLE>(hSocket); }
+public:
+	operator SOCKET() { return hSocket; }
+public:
+	~TSocketTcp() {
+		int err = ::closesocket(hSocket);
+		Verify(0 == err);
+		hSocket = NULL;
+	}
+};
