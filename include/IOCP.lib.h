@@ -77,18 +77,12 @@ public:
 	}
 };
 
-///////////////////////////////////
-class TSocketTcp : public TSocket {
-	TSocketTcp() : TSocket(SOCK_STREAM, IPPROTO_TCP, WSA_FLAG_OVERLAPPED) {}
-};
-
-///////////////////////////////////
-class TSocketUdp : public TSocket {
-	TSocketUdp() : TSocket(SOCK_DGRAM, IPPROTO_UDP, WSA_FLAG_OVERLAPPED) {}
-};
-
 //////////////////////////
 class TWinsockExtentions {
+public:
+	TWinsockExtentions() : lpfnTransmitFile(NULL), lpfnAcceptEx(NULL), lpfnGetAcceptExSockAddrs(NULL),
+		lpfnTransmitPackets(NULL), lpfnConnectEx(NULL), lpfnDisconnectEx(NULL), 
+		socket(INVALID_SOCKET) {}
 private:
 	LPFN_TRANSMITFILE lpfnTransmitFile;
 public:
@@ -102,6 +96,7 @@ public:
 		DWORD dwReserved
 		)
 	{
+		Verify(NULL != socket);
 		Verify(NULL != lpfnTransmitFile);
 		return lpfnTransmitFile(
 			hSocket,
@@ -127,6 +122,7 @@ public:
 		LPOVERLAPPED lpOverlapped
 		)
 	{
+		Verify(NULL != socket);
 		Verify(NULL != lpfnAcceptEx);
 		return lpfnAcceptEx(
 			sListenSocket,
@@ -147,12 +143,13 @@ public:
 		DWORD dwReceiveDataLength,
 		DWORD dwLocalAddressLength,
 		DWORD dwRemoteAddressLength,
-		struct sockaddr **LocalSockaddr,
+	struct sockaddr **LocalSockaddr,
 		LPINT LocalSockaddrLength,
-		struct sockaddr **RemoteSockaddr,
+	struct sockaddr **RemoteSockaddr,
 		LPINT RemoteSockaddrLength
 		)
 	{
+		Verify(NULL != socket);
 		Verify(NULL != lpfnGetAcceptExSockAddrs);
 		return lpfnGetAcceptExSockAddrs(
 			lpOutputBuffer,
@@ -177,6 +174,7 @@ public:
 		DWORD dwFlags                               
 		)
 	{
+		Verify(NULL != socket);
 		Verify(NULL != lpfnTransmitPackets);
 		return lpfnTransmitPackets(
 			hSocket,                             
@@ -201,6 +199,7 @@ public:
 		)
 	{
 		Verify(NULL != lpfnConnectEx);
+		Verify(NULL != socket);
 		return lpfnConnectEx(
 			s,
 			name,
@@ -221,6 +220,7 @@ public:
 		DWORD  dwReserved
 		)
 	{
+		Verify(NULL != socket);
 		Verify(NULL != lpfnDisconnectEx);
 		return lpfnDisconnectEx(
 			s,
@@ -230,7 +230,21 @@ public:
 			);
 	}
 public:
+	BOOL Send(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) {
+		Verify(NULL != socket);
+		return ::WSASend(socket, lpBuffers, dwBufferCount, NULL, 0, lpOverlapped, NULL);
+	}
+public:
+	BOOL Recv(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) {
+		Verify(NULL != socket);
+		return ::WSARecv(socket, lpBuffers, dwBufferCount, NULL, NULL, lpOverlapped, NULL);
+	}
+private:
+	SOCKET socket;
+public:
 	void Init(SOCKET socket) {
+		Verify(NULL != socket);
+
 		DWORD dwBytes = 0;
 		int check = 0;
 
@@ -265,3 +279,18 @@ public:
 		Verify(SOCKET_ERROR != check);
 	}
 };
+
+//////////////////////////////////////////////////////////////
+class TSocketTcp : public TSocket, public TWinsockExtentions {
+	TSocketTcp() : TSocket(SOCK_STREAM, IPPROTO_TCP, WSA_FLAG_OVERLAPPED) {
+		Init(*this);
+	}
+};
+
+//////////////////////////////////////////////////////////////
+class TSocketUdp : public TSocket, public TWinsockExtentions {
+	TSocketUdp() : TSocket(SOCK_DGRAM, IPPROTO_UDP, WSA_FLAG_OVERLAPPED) {
+		Init(*this);
+	}
+};
+
