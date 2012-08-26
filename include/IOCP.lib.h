@@ -51,32 +51,6 @@ public:
 	}
 };
 
-///////////////
-class TSocket {
-private:
-	SOCKET hSocket;
-private:
-	TSocket() {}
-public:
-	enum TSocketType { TCP = 1, UDP = 2 };
-public:
-	TSocket(int type, int protocol, int flags) : hSocket(NULL) {
-		hSocket = ::WSASocket(AF_INET, type, protocol,
-			NULL, 0, flags);
-		Verify(INVALID_SOCKET != hSocket);
-	}
-public:
-	operator HANDLE() { return reinterpret_cast<HANDLE>(hSocket); }
-public:
-	operator SOCKET() { return hSocket; }
-public:
-	~TSocket() {
-		int err = ::closesocket(hSocket);
-		Verify(0 == err);
-		hSocket = NULL;
-	}
-};
-
 //////////////////////////
 class TWinsockExtentions {
 public:
@@ -280,17 +254,42 @@ public:
 	}
 };
 
-//////////////////////////////////////////////////////////////
-class TSocketTcp : public TSocket, public TWinsockExtentions {
-	TSocketTcp() : TSocket(SOCK_STREAM, IPPROTO_TCP, WSA_FLAG_OVERLAPPED) {
-		Init(*this);
+///////////////////////////////////////////
+class TSocket : public TWinsockExtentions {
+private:
+	SOCKET hSocket;
+private:
+	TSocket() {}
+public:
+	enum TSocketType { TCP = 1, UDP = 2 };
+public:
+	TSocket(int type, int protocol, int flags) : hSocket(NULL) {
+		hSocket = ::WSASocket(AF_INET, type, protocol,
+			NULL, 0, flags);
+		Verify(INVALID_SOCKET != hSocket);
+		TWinsockExtentions::Init(hSocket);
+	}
+public:
+	operator HANDLE() { return reinterpret_cast<HANDLE>(hSocket); }
+public:
+	operator SOCKET() { return hSocket; }
+public:
+	virtual ~TSocket() {
+		int err = ::closesocket(hSocket);
+		Verify(0 == err);
+		hSocket = NULL;
 	}
 };
 
 //////////////////////////////////////////////////////////////
-class TSocketUdp : public TSocket, public TWinsockExtentions {
+class TSocketTcp : public TSocket {
+	TSocketTcp() : TSocket(SOCK_STREAM, IPPROTO_TCP, WSA_FLAG_OVERLAPPED) {
+	}
+};
+
+//////////////////////////////////////////////////////////////
+class TSocketUdp : public TSocket {
 	TSocketUdp() : TSocket(SOCK_DGRAM, IPPROTO_UDP, WSA_FLAG_OVERLAPPED) {
-		Init(*this);
 	}
 };
 

@@ -2,6 +2,21 @@
 
 #include "IOCP.lib.h"
 
+//////////////////////////////////////
+class TRioSocketTcp : public TSocket {
+	TRioSocketTcp() : TSocket(SOCK_STREAM, IPPROTO_TCP, WSA_FLAG_REGISTERED_IO) {
+		Init(*this);
+	}
+};
+
+//////////////////////////////////////
+class TRioSocketUdp : public TSocket {
+	TRioSocketUdp() : TSocket(SOCK_DGRAM, IPPROTO_UDP, WSA_FLAG_REGISTERED_IO) {
+		Init(*this);
+	}
+};
+
+//////////////////////
 class TRioExtensions {
 public:
 	TRioExtensions() : socket(INVALID_SOCKET) {
@@ -245,3 +260,28 @@ public:
 		Verify(SOCKET_ERROR != check);
 	}
 };
+
+//////////////////////////////////////////////////////////////////////////
+class TRioSocketQueue : public TWinsockExtentions, public TRioExtensions {
+private:
+	TSocket socket;
+public:
+	TRioSocketQueue(int type, int protocol) : socket(type, protocol, WSA_FLAG_REGISTERED_IO) {
+		TRioExtensions::Init(socket);
+	}
+};
+
+///////////////////////////////////////////////////
+class TRioSocketQueueTcp : public TRioSocketQueue {
+	TRioSocketQueueTcp(int type = SOCK_STREAM, int protocol = IPPROTO_TCP) : 
+		TRioSocketQueue(type, protocol) {
+	}
+};
+
+///////////////////////////////////////////////////
+class TRioSocketQueueUdp : public TRioSocketQueue {
+	TRioSocketQueueUdp(int type = SOCK_DGRAM, int protocol = IPPROTO_UDP) :
+		TRioSocketQueue(type, protocol) {
+	}
+};
+
