@@ -262,26 +262,39 @@ public:
 };
 
 //////////////////////////////////////////////////////////////////////////
-class TRioSocketQueue : public TWinsockExtentions, public TRioExtensions {
+class TRioSocketQueue : public TRioExtensions {
 private:
 	TSocket socket;
+private:
+	RIO_RQ rq;
 public:
-	TRioSocketQueue(int type, int protocol) : socket(type, protocol, WSA_FLAG_REGISTERED_IO) {
+	TRioSocketQueue(int type, int protocol, unsigned long depth, RIO_CQ completion_queue) : 
+		socket(type, protocol, WSA_FLAG_REGISTERED_IO), rq(NULL) {
 		TRioExtensions::Init(socket);
+		rq = RIOCreateRequestQueue(
+			depth, 1, depth, 1, completion_queue, completion_queue, NULL);
+		Verify(RIO_INVALID_RQ != rq);
+	}
+public:
+	operator SOCKET() { return socket; }
+public:
+	operator HANDLE() { return socket; }
+public:
+	~TRioSocketQueue() {
+		// OS cleanup via closesocket
 	}
 };
 
 ///////////////////////////////////////////////////
 class TRioSocketQueueTcp : public TRioSocketQueue {
-	TRioSocketQueueTcp(int type = SOCK_STREAM, int protocol = IPPROTO_TCP) : 
-		TRioSocketQueue(type, protocol) {
+	TRioSocketQueueTcp(unsigned long depth, RIO_CQ cq, int type = SOCK_STREAM, int protocol = IPPROTO_TCP) : 
+		TRioSocketQueue(type, protocol, depth, cq) {
 	}
 };
 
 ///////////////////////////////////////////////////
 class TRioSocketQueueUdp : public TRioSocketQueue {
-	TRioSocketQueueUdp(int type = SOCK_DGRAM, int protocol = IPPROTO_UDP) :
-		TRioSocketQueue(type, protocol) {
+	TRioSocketQueueUdp(unsigned long depth, RIO_CQ cq, int type = SOCK_DGRAM, int protocol = IPPROTO_UDP) :
+		TRioSocketQueue(type, protocol, depth, cq) {
 	}
 };
-
