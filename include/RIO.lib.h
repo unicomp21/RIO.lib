@@ -21,6 +21,7 @@ public:
 		PVOID RequestContext
 		)
 	{
+		Verify(INVALID_SOCKET != socket);
 		Verify(NULL != function_table.RIOReceive);
 		return function_table.RIOReceive(
 			SocketQueue,
@@ -43,6 +44,7 @@ public:
 		PVOID RequestContext
 		)
 	{
+		Verify(INVALID_SOCKET != socket);
 		Verify(NULL != function_table.RIOReceiveEx);
 		return function_table.RIOReceiveEx(
 			SocketQueue,
@@ -65,6 +67,7 @@ public:
 		PVOID RequestContext
 		)
 	{
+		Verify(INVALID_SOCKET != socket);
 		Verify(NULL != function_table.RIOSend);
 		return function_table.RIOSend(
 			SocketQueue,
@@ -87,6 +90,7 @@ public:
 		PVOID RequestContext
 		)
 	{
+		Verify(INVALID_SOCKET != socket);
 		Verify(NULL != function_table.RIOSendEx);
 		return function_table.RIOSendEx(
 			SocketQueue,
@@ -101,8 +105,136 @@ public:
 			);
 	}
 public:
+	VOID RIOCloseCompletionQueue(
+		RIO_CQ CQ
+		)
+	{
+		Verify(INVALID_SOCKET != socket);
+		Verify(NULL != function_table.RIOCloseCompletionQueue);
+		return function_table.RIOCloseCompletionQueue(
+			CQ
+			);
+	}
+public:
+	RIO_CQ RIOCreateCompletionQueue(
+		DWORD QueueSize,
+		PRIO_NOTIFICATION_COMPLETION NotificationCompletion
+		)
+	{
+		Verify(INVALID_SOCKET != socket);
+		Verify(NULL != function_table.RIOCreateCompletionQueue);
+		return function_table.RIOCreateCompletionQueue(
+			QueueSize,
+			NotificationCompletion
+			);
+	}
+public:
+	RIO_RQ RIOCreateRequestQueue(
+		ULONG MaxOutstandingReceive,
+		ULONG MaxReceiveDataBuffers,
+		ULONG MaxOutstandingSend,
+		ULONG MaxSendDataBuffers,
+		RIO_CQ ReceiveCQ,
+		RIO_CQ SendCQ,
+		PVOID SocketContext
+		)
+	{
+		Verify(INVALID_SOCKET != socket);
+		Verify(NULL != function_table.RIOCreateRequestQueue);
+		return function_table.RIOCreateRequestQueue(
+			socket,
+			MaxOutstandingReceive,
+			MaxReceiveDataBuffers,
+			MaxOutstandingSend,
+			MaxSendDataBuffers,
+			ReceiveCQ,
+			SendCQ,
+			SocketContext
+			);
+	}
+public:
+	ULONG RIODequeueCompletion(
+		RIO_CQ CQ,
+		PRIORESULT Array,
+		ULONG ArraySize
+		)
+	{
+		Verify(INVALID_SOCKET != socket);
+		Verify(NULL != function_table.RIODequeueCompletion);
+		return function_table.RIODequeueCompletion(
+			CQ,
+			Array,
+			ArraySize
+			);
+	}
+public:
+	VOID RIODeregisterBuffer(
+		RIO_BUFFERID BufferId
+		)
+	{
+		Verify(INVALID_SOCKET != socket);
+		Verify(NULL != function_table.RIODeregisterBuffer);
+		return function_table.RIODeregisterBuffer(
+			BufferId
+			);
+	}
+public:
+	INT RIONotify(
+		RIO_CQ CQ
+		)
+	{
+		Verify(INVALID_SOCKET != socket);
+		Verify(NULL != function_table.RIONotify);
+		return function_table.RIONotify(
+			CQ
+			);
+	}
+public:
+	RIO_BUFFERID RIORegisterBuffer(
+		PCHAR DataBuffer,
+		DWORD DataLength
+		)
+	{
+		Verify(INVALID_SOCKET != socket);
+		Verify(NULL != function_table.RIORegisterBuffer);
+		return function_table.RIORegisterBuffer(
+			DataBuffer,
+			DataLength
+			);
+	}
+public:
+	BOOL RIOResizeCompletionQueue(
+		RIO_CQ CQ,
+		DWORD QueueSize
+		)
+	{
+		Verify(INVALID_SOCKET != socket);
+		Verify(NULL != function_table.RIOResizeCompletionQueue);
+		return function_table.RIOResizeCompletionQueue(
+			CQ,
+			QueueSize
+			);
+	}
+public:
+	BOOL RIOResizeRequestQueue(
+		RIO_RQ RQ,
+		DWORD MaxOutstandingReceive,
+		DWORD MaxOutstandingSend
+		)
+	{
+		Verify(INVALID_SOCKET != socket);
+		Verify(NULL != function_table.RIOResizeRequestQueue);
+		return function_table.RIOResizeRequestQueue(
+			RQ,
+			MaxOutstandingReceive,
+			MaxOutstandingSend
+			);
+	}
+public:
 	void Init(SOCKET socket) {
+		Verify(INVALID_SOCKET != socket);
 		Verify(NULL != socket);
+		this->socket = socket;
 
 		DWORD dwBytes = 0;
 		int check = 0;
