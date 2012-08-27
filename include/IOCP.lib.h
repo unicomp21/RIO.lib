@@ -281,15 +281,14 @@ public:
 	}
 };
 
-//////////////////////////////////////////////////////////////
+///////////////////////////////////
 class TSocketTcp : public TSocket {
 	TSocketTcp() : TSocket(SOCK_STREAM, IPPROTO_TCP, WSA_FLAG_OVERLAPPED) {
 	}
 };
 
-//////////////////////////////////////////////////////////////
+///////////////////////////////////
 class TSocketUdp : public TSocket {
 	TSocketUdp() : TSocket(SOCK_DGRAM, IPPROTO_UDP, WSA_FLAG_OVERLAPPED) {
 	}
 };
-

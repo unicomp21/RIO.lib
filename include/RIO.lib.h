@@ -1,6 +1,8 @@
 #pragma once
 
 #include "IOCP.lib.h"
+#include <memory>
+#include <vector>
 
 //////////////////////////////////////
 class TRioSocketTcp : public TSocket {
@@ -28,7 +30,7 @@ private:
 private:
 	RIO_EXTENSION_FUNCTION_TABLE function_table;
 public:
-	BOOL RioReceive(
+	BOOL RIOReceive(
 		RIO_RQ SocketQueue,
 		PRIO_BUF pData,
 		ULONG DataBufferCount,
@@ -47,7 +49,7 @@ public:
 			);
 	}
 public:
-	BOOL RioReceiveEx(
+	BOOL RIOReceiveEx(
 		RIO_RQ SocketQueue,
 		PRIO_BUF pData,
 		ULONG DataBufferCount,
@@ -261,24 +263,209 @@ public:
 	}
 };
 
-//////////////////////////////////////////////////////////////////////////
-class TRioSocketQueue : public TRioExtensions {
+/////////////////////////
+class TRioBufferManager {
+	friend class TRioSocketQueue;
+private:
+	TRioBufferManager() { }
+private:
+	TRioExtensions rio_extensions;
+private:
+	std::vector<CHAR> buffer;
+private:
+	RIO_BUFFERID bufferid;
+public:
+	operator RIO_BUFFERID() { return bufferid; }
+private:
+	TRioBufferManager(SOCKET socket, size_t size) : buffer(size), bufferid(RIO_INVALID_BUFFERID) {
+		rio_extensions.Init(socket);
+		bufferid = rio_extensions.RIORegisterBuffer(&buffer[0], static_cast<DWORD>(size));
+		Verify(RIO_INVALID_BUFFERID != bufferid);
+	}
+public:
+	BOOL Alloc(DWORD size) {
+		//todo
+	}
+public:
+	~TRioBufferManager() {
+		rio_extensions.RIODeregisterBuffer(bufferid);
+	}
+};
+
+///////////////////////////
+class TRioCompletionQueue {
+	friend class TRioSocketQueue;
+private:
+	TRioCompletionQueue() { }
+private:
+	TRioExtensions rio_extensions;
+private:
+	RIO_CQ cq;
+private:
+	TRioCompletionQueue(SOCKET socket, DWORD queue_size, HANDLE hEvent) : cq(RIO_INVALID_CQ) {
+		rio_extensions.Init(socket);
+		RIO_NOTIFICATION_COMPLETION notification_completion;
+		memset(&notification_completion, 0, sizeof(notification_completion));
+		notification_completion.Type = RIO_EVENT_COMPLETION;
+		notification_completion.Event.EventHandle = hEvent;
+		notification_completion.Event.NotifyReset = TRUE;
+		cq = rio_extensions.RIOCreateCompletionQueue(
+			queue_size,
+			&notification_completion
+			);
+		Verify(RIO_INVALID_CQ != cq);
+	}
+public:
+	BOOL Resize(DWORD size) {
+		Verify(RIO_INVALID_CQ != cq);
+		return rio_extensions.RIOResizeCompletionQueue(cq, size);
+	}
+public:
+	INT Notify() {
+		Verify(RIO_INVALID_CQ != cq);
+		return rio_extensions.RIONotify(cq);
+	}
+public:
+	ULONG Dequeue(
+		PRIORESULT Array,
+		ULONG ArraySize
+		)
+	{
+		Verify(RIO_INVALID_CQ != cq);
+		return rio_extensions.RIODequeueCompletion(
+			cq,
+			Array,
+			ArraySize
+			);
+	}
+public:
+	~TRioCompletionQueue() {
+		rio_extensions.RIOCloseCompletionQueue(cq);
+		cq = RIO_INVALID_CQ;
+	}
+};
+
+///////////////////////
+class TRioSocketQueue {
 private:
 	TSocket socket;
+private:
+	TRioExtensions rio_extensions;
 private:
 	RIO_RQ rq;
 public:
 	TRioSocketQueue(int type, int protocol, unsigned long depth, RIO_CQ completion_queue) : 
 		socket(type, protocol, WSA_FLAG_REGISTERED_IO), rq(NULL) {
-		TRioExtensions::Init(socket);
-		rq = RIOCreateRequestQueue(
+		rio_extensions.Init(socket);
+		rq = rio_extensions.RIOCreateRequestQueue(
 			depth, 1, depth, 1, completion_queue, completion_queue, NULL);
 		Verify(RIO_INVALID_RQ != rq);
 	}
 public:
-	operator SOCKET() { return socket; }
+	operator TSocket&() { return socket; }
 public:
-	operator HANDLE() { return socket; }
+	std::shared_ptr<TRioBufferManager> CreateBufferManager(size_t size) {
+		std::shared_ptr<TRioBufferManager> buffer_manager =
+			std::shared_ptr<TRioBufferManager>(new TRioBufferManager(socket, size));
+		return buffer_manager;
+	}
+public:
+	std::shared_ptr<TRioCompletionQueue> CreateCompletionQueue(
+		DWORD queue_size, HANDLE hEvent)
+	{
+		std::shared_ptr<TRioCompletionQueue> completion_queue =
+			std::shared_ptr<TRioCompletionQueue>(new TRioCompletionQueue(socket, queue_size, hEvent));
+		return completion_queue;
+	}
+public:
+	BOOL ResizeRequestQueue(
+		DWORD MaxOutstandingReceive,
+		DWORD MaxOutstandingSend
+		)
+	{
+		return rio_extensions.RIOResizeRequestQueue(
+			rq, MaxOutstandingReceive, MaxOutstandingSend);
+	}
+public:
+	BOOL Receive(
+		PRIO_BUF pData,
+		ULONG DataBufferCount,
+		DWORD Flags,
+		PVOID RequestContext
+		)
+	{
+		return rio_extensions.RIOReceive(
+			rq,
+			pData,
+			DataBufferCount,
+			Flags,
+			RequestContext
+			);
+	}
+public:
+	int ReceiveEx(
+		PRIO_BUF pData,
+		ULONG DataBufferCount,
+		PRIO_BUF pLocalAddress,
+		PRIO_BUF pRemoteAddress,
+		PRIO_BUF pControlContext,
+		PRIO_BUF pFlags,
+		DWORD Flags,
+		PVOID RequestContext
+		)
+	{
+		return rio_extensions.RIOReceiveEx(
+			rq,
+			pData,
+			DataBufferCount,
+			pLocalAddress,
+			pRemoteAddress,
+			pControlContext,
+			pFlags,
+			Flags,
+			RequestContext
+			);
+	}
+public:
+	BOOL Send(
+		PRIO_BUF pData,
+		ULONG DataBufferCount,
+		DWORD Flags,
+		PVOID RequestContext
+		)
+	{
+		return rio_extensions.RIOSend(
+			rq,
+			pData,
+			DataBufferCount,
+			Flags,
+			RequestContext
+			);
+	}
+public:
+	int SendEx(
+		PRIO_BUF pData,
+		ULONG DataBufferCount,
+		PRIO_BUF pLocalAddress,
+		PRIO_BUF pRemoteAddress,
+		PRIO_BUF pControlContext,
+		PRIO_BUF pFlags,
+		DWORD Flags,
+		PVOID RequestContext
+		)
+	{
+		return rio_extensions.RIOSendEx(
+			rq,
+			pData,
+			DataBufferCount,
+			pLocalAddress,
+			pRemoteAddress,
+			pControlContext,
+			pFlags,
+			Flags,
+			RequestContext
+			);
+	}
 public:
 	~TRioSocketQueue() {
 		// OS cleanup via closesocket
