@@ -5,6 +5,8 @@
 #include <ws2tcpip.h>
 #include <mswsock.h>
 #include <stdio.h>
+#include <memory>
+#include <vector>
 
 // Need to link with Ws2_32.lib
 #pragma comment(lib, "Ws2_32.lib")

@@ -1,8 +1,6 @@
 #pragma once
 
 #include "IOCP.lib.h"
-#include <memory>
-#include <vector>
 
 //////////////////////////////////////
 class TRioSocketTcp : public TSocket {
