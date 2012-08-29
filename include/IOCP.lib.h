@@ -276,6 +276,10 @@ public:
 public:
 	operator SOCKET() { return hSocket; }
 public:
+	BOOL Disconnect(LPOVERLAPPED lpOverlapped) {
+		return DisconnectEx(*this, lpOverlapped, TF_REUSE_SOCKET, 0);
+	}
+public:
 	virtual ~TSocket() {
 		int err = ::closesocket(hSocket);
 		Verify(0 == err);
