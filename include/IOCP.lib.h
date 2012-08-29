@@ -354,6 +354,7 @@ public:
 
 ///////////////////////////////////
 class TSocketUdp : public TSocket {
+public:
 	TSocketUdp() : TSocket(SOCK_DGRAM, IPPROTO_UDP, WSA_FLAG_OVERLAPPED) {
 	}
 };
