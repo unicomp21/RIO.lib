@@ -294,6 +294,38 @@ public:
 	}
 };
 
+/////////////////////////////////////
+class TListenerEx : public TSocketTcp {
+private:
+	std::vector<char> addresses_buffer;
+private:
+	enum { address_reserve = sizeof(SOCKADDR_IN) + 16 };
+public:
+	TListenerEx(std::string intfc, short port) : 
+		addresses_buffer(2 * address_reserve), bytes_recv(0)
+	{
+		SOCKADDR_IN addr;
+		memset(&addr, 0, sizeof(addr));
+		addr.sin_addr.S_un.S_addr = ::inet_addr(intfc.c_str());
+		addr.sin_family = AF_INET;
+		addr.sin_port = ::htons(port);
+		int check = ::bind(*this, reinterpret_cast<LPSOCKADDR>(&addr), sizeof(addr));
+		Verify(SOCKET_ERROR != check);
+		check = ::listen(*this, SOMAXCONN);
+		Verify(SOCKET_ERROR != check);
+	}
+private:
+	DWORD bytes_recv;
+public:
+	std::shared_ptr<TSocket> Accept(LPOVERLAPPED lpOverlapped) {
+		std::shared_ptr<TSocketTcp> acceptor = std::shared_ptr<TSocketTcp>(new TSocketTcp());
+		BOOL check = AcceptEx(*this, *acceptor, &addresses_buffer[0], 0,
+			address_reserve, address_reserve, &bytes_recv, lpOverlapped);
+		if(FALSE == check)
+			Verify(ERROR_IO_PENDING == ::WSAGetLastError());
+	}
+};
+
 ///////////////////////////////////
 class TSocketUdp : public TSocket {
 	TSocketUdp() : TSocket(SOCK_DGRAM, IPPROTO_UDP, WSA_FLAG_OVERLAPPED) {
