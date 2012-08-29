@@ -289,6 +289,7 @@ public:
 
 ///////////////////////////////////
 class TSocketTcp : public TSocket {
+public:
 	TSocketTcp() : TSocket(SOCK_STREAM, IPPROTO_TCP, WSA_FLAG_OVERLAPPED) {
 	}
 };
