@@ -294,7 +294,7 @@ public:
 	}
 };
 
-/////////////////////////////////////
+///////////////////////////////////////
 class TListenerEx : public TSocketTcp {
 private:
 	std::vector<char> addresses_buffer;
