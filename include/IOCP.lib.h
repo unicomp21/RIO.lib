@@ -35,7 +35,7 @@ public:
 	virtual void Completed(BOOL status, DWORD byte_count);
 };
 
-///////////////////
+////////////
 class TIOCP;
 class TOverlapped : OVERLAPPED {
 	friend class TIOCP;
