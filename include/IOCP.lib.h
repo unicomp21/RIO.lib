@@ -30,9 +30,10 @@ public:
 };
 
 /////////////////////////
+class TOverlapped;
 class ICompletionResult {
 public:
-	virtual void Completed(BOOL status, DWORD byte_count);
+	virtual void Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped) = 0;
 };
 
 ////////////
@@ -41,8 +42,8 @@ class TOverlapped : public OVERLAPPED {
 	friend class TIOCP;
 public:
 	void Reset() { LPOVERLAPPED clear = this; memset(clear, 0, sizeof(OVERLAPPED)); }
-private:
-	TOverlapped() : iCompletion(NULL) { Reset(); }
+public:
+	TOverlapped() : iCompletion(NULL) { __debugbreak(); /* not implemented */ }
 private:
 	ICompletionResult *iCompletion;
 public:
@@ -81,11 +82,11 @@ public:
 		TOverlapped *pOverlapped = reinterpret_cast<TOverlapped*>(lpOverlapped);
 		if(TRUE == status) {
 			Verify(NULL != pOverlapped->iCompletion);
-			pOverlapped->iCompletion->Completed(status, byte_count);
+			pOverlapped->iCompletion->Completed(status, byte_count, pOverlapped);
 		} else {
 			if(NULL != lpOverlapped) {
 				Verify(NULL != pOverlapped->iCompletion);
-				pOverlapped->iCompletion->Completed(status, byte_count);
+				pOverlapped->iCompletion->Completed(status, byte_count, pOverlapped);
 			} else {
 				//timeout
 			}
@@ -348,62 +349,97 @@ public:
 	}
 };
 
-///////////////////////////////////////
-class TListenerEx : public TSocketTcp {
+///////////////////////////////////////////////
+class TListenerEx : private ICompletionResult {
 private:
-	std::vector<char> addresses_buffer;
+	class TOverlappedListener : public TOverlapped {
+	public:
+		std::vector<char> addresses_buffer;
+	public:
+		enum { address_reserve = sizeof(SOCKADDR_IN) + 16 };
+	public:
+		DWORD byte_count;
+	public:
+		std::shared_ptr<TSocket> acceptee;
+	private:
+		TOverlappedListener() : byte_count(0) { }
+	public:
+		TOverlappedListener(ICompletionResult *ICompletionResult) : 
+			byte_count(0), addresses_buffer(2 * address_reserve),
+			TOverlapped(ICompletionResult) {
+			acceptee = std::shared_ptr<TSocket>(new TSocketTcp());
+		}
+	};
 private:
-	enum { address_reserve = sizeof(SOCKADDR_IN) + 16 };
+	std::shared_ptr<TSocketTcp> acceptor;
 public:
-	TListenerEx(std::string intfc, short port) : 
-		addresses_buffer(2 * address_reserve), bytes_recv(0)
-	{
+	TListenerEx(std::string intfc, short port, int depth) {
+		acceptor = std::shared_ptr<TSocketTcp>(new TSocketTcp());
+
 		SOCKADDR_IN addr;
 		memset(&addr, 0, sizeof(addr));
 		addr.sin_addr.S_un.S_addr = ::inet_addr(intfc.c_str());
 		addr.sin_family = AF_INET;
 		addr.sin_port = ::htons(port);
-		int check = ::bind(*this, reinterpret_cast<LPSOCKADDR>(&addr), sizeof(addr));
+		int check = ::bind(*acceptor, reinterpret_cast<LPSOCKADDR>(&addr), sizeof(addr));
 		Verify(SOCKET_ERROR != check);
-		check = ::listen(*this, SOMAXCONN);
+		check = ::listen(*acceptor, SOMAXCONN);
 		Verify(SOCKET_ERROR != check);
+
+		for(int i = 0; i < depth; i++) {
+			TOverlappedListener *overlapped = new TOverlappedListener(this);
+			BOOL check = acceptor->AcceptEx(*overlapped->acceptee, 
+				&overlapped->addresses_buffer[0], 0,
+				TOverlappedListener::address_reserve, TOverlappedListener::address_reserve, 
+				&overlapped->byte_count, overlapped);
+			if(FALSE == check)
+				Verify(ERROR_IO_PENDING == ::WSAGetLastError());
+		}
 	}
 private:
-	DWORD bytes_recv;
-public:
-	std::shared_ptr<TSocket> Accept(LPOVERLAPPED lpOverlapped) {
-		std::shared_ptr<TSocketTcp> acceptor = std::shared_ptr<TSocketTcp>(new TSocketTcp());
-		BOOL check = AcceptEx(*this, *acceptor, &addresses_buffer[0], 0,
-			address_reserve, address_reserve, &bytes_recv, lpOverlapped);
-		if(FALSE == check)
-			Verify(ERROR_IO_PENDING == ::WSAGetLastError());
+	virtual void ICompletionResult::Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped) {
+		std::auto_ptr<TOverlappedListener> overlapped_listener(
+			reinterpret_cast<TOverlappedListener*>(overlapped));
+		Accepted(status, std::shared_ptr<TSocket>(overlapped_listener->acceptee));
 	}
+public:
+	virtual void Accepted(BOOL status, std::shared_ptr<TSocket> socket) = 0;
 };
 
 /////////////////////////////////////
-class TClientEx : public TSocketTcp {
+class TClientEx : private ICompletionResult {
 private:
 	SOCKADDR_IN addr;
+private:
+	std::shared_ptr<TSocketTcp> connector;
+private:
+	std::shared_ptr<TOverlapped> connect_notify;
 public:
-	TClientEx(std::string intfc, short port)
+	TClientEx(TIOCP &iocp, std::string intfc, short port)
 	{
 		memset(&addr, 0, sizeof(addr));
 		addr.sin_addr.S_un.S_addr = ::inet_addr(intfc.c_str());
 		addr.sin_family = AF_INET;
 		addr.sin_port = ::htons(port);
-		int check = ::bind(*this, reinterpret_cast<LPSOCKADDR>(&addr), sizeof(addr));
+		int check = ::bind(*connector, reinterpret_cast<LPSOCKADDR>(&addr), sizeof(addr));
 		Verify(SOCKET_ERROR != check);
-		check = ::listen(*this, SOMAXCONN);
+		check = ::listen(*connector, SOMAXCONN);
 		Verify(SOCKET_ERROR != check);
-	}
-public:
-	std::shared_ptr<TSocket> Connect(LPOVERLAPPED lpOverlapped) {
-		std::shared_ptr<TSocketTcp> connector = std::shared_ptr<TSocketTcp>(new TSocketTcp());
-		BOOL check = ConnectEx(*this, reinterpret_cast<LPSOCKADDR>(&addr), sizeof(addr),
-			NULL, 0, NULL, lpOverlapped);
+
+		connector = std::shared_ptr<TSocketTcp>(new TSocketTcp());
+		connect_notify = std::shared_ptr<TOverlapped>(new TOverlapped(this));
+
+		check = connector->ConnectEx(reinterpret_cast<LPSOCKADDR>(&addr), sizeof(addr),
+			NULL, 0, NULL, *connect_notify);
 		if(FALSE == check)
 			Verify(ERROR_IO_PENDING == ::WSAGetLastError());
 	}
+private:
+	virtual void Completed(BOOL status, DWORD byte_count) {
+		Connected(status);
+	}
+protected:
+	virtual void Connected(BOOL status) = 0;
 };
 
 ///////////////////////////////////
