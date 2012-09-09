@@ -125,7 +125,6 @@ private:
 	LPFN_TRANSMITFILE lpfnTransmitFile;
 public:
 	BOOL TransmitFile(
-		SOCKET hSocket,
 		HANDLE hFile,
 		DWORD nNumberOfBytesToWrite,
 		DWORD nNumberOfBytesPerSend,
@@ -137,7 +136,7 @@ public:
 		Verify(NULL != socket);
 		Verify(NULL != lpfnTransmitFile);
 		return lpfnTransmitFile(
-			hSocket,
+			socket,
 			hFile,
 			nNumberOfBytesToWrite,
 			nNumberOfBytesPerSend,
@@ -150,7 +149,6 @@ private:
 	LPFN_ACCEPTEX lpfnAcceptEx;
 public:
 	BOOL AcceptEx(
-		SOCKET sListenSocket,
 		SOCKET sAcceptSocket,
 		PVOID lpOutputBuffer,
 		DWORD dwReceiveDataLength,
@@ -163,7 +161,7 @@ public:
 		Verify(NULL != socket);
 		Verify(NULL != lpfnAcceptEx);
 		return lpfnAcceptEx(
-			sListenSocket,
+			socket,
 			sAcceptSocket,
 			lpOutputBuffer,
 			dwReceiveDataLength,
@@ -204,7 +202,6 @@ private:
 	LPFN_TRANSMITPACKETS lpfnTransmitPackets;
 public:
 	BOOL TransmitPackets(
-		SOCKET hSocket,                             
 		LPTRANSMIT_PACKETS_ELEMENT lpPacketArray,                               
 		DWORD nElementCount,                
 		DWORD nSendSize,                
@@ -215,7 +212,7 @@ public:
 		Verify(NULL != socket);
 		Verify(NULL != lpfnTransmitPackets);
 		return lpfnTransmitPackets(
-			hSocket,                             
+			socket,                             
 			lpPacketArray,                               
 			nElementCount,                
 			nSendSize,                
@@ -227,7 +224,6 @@ private:
 	LPFN_CONNECTEX lpfnConnectEx;
 public:
 	BOOL ConnectEx(
-		SOCKET s,
 		const struct sockaddr FAR *name,
 		int namelen,
 		PVOID lpSendBuffer,
@@ -239,7 +235,7 @@ public:
 		Verify(NULL != lpfnConnectEx);
 		Verify(NULL != socket);
 		return lpfnConnectEx(
-			s,
+			socket,
 			name,
 			namelen,
 			lpSendBuffer,
@@ -252,7 +248,6 @@ private:
 	LPFN_DISCONNECTEX lpfnDisconnectEx;
 public:
 	BOOL DisconnectEx(
-		SOCKET s,
 		LPOVERLAPPED lpOverlapped,
 		DWORD  dwFlags,
 		DWORD  dwReserved
@@ -261,7 +256,7 @@ public:
 		Verify(NULL != socket);
 		Verify(NULL != lpfnDisconnectEx);
 		return lpfnDisconnectEx(
-			s,
+			socket,
 			lpOverlapped,
 			dwFlags,
 			dwReserved
@@ -279,9 +274,10 @@ public:
 	}
 private:
 	SOCKET socket;
-public:
+protected:
 	void Init(SOCKET socket) {
 		Verify(NULL != socket);
+		this->socket = socket;
 
 		DWORD dwBytes = 0;
 		int check = 0;
@@ -337,10 +333,6 @@ public:
 	operator HANDLE() { return reinterpret_cast<HANDLE>(hSocket); }
 public:
 	operator SOCKET() { return hSocket; }
-public:
-	BOOL Disconnect(LPOVERLAPPED lpOverlapped) {
-		return DisconnectEx(*this, lpOverlapped, TF_REUSE_SOCKET, 0);
-	}
 public:
 	virtual ~TSocket() {
 		int err = ::closesocket(hSocket);
