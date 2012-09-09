@@ -332,6 +332,7 @@ public:
 			for(__int64 i = seqno; i < next_seqno; i++) {
 				TBlockHeader *header = reinterpret_cast<TBlockHeader*>
 					(&parent_buffer[(i % block_count) * block_size]);
+				Verify(header->seqno == seqno);
 				if(header->topic == topic) {
 					char *payload = reinterpret_cast<char*>(&header[1]);
 					read_buffer.resize(header->rio_buf.Length);
