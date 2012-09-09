@@ -274,7 +274,6 @@ private:
 	struct TBlockHeader {
 		__int64 seqno;
 		__int64 topic;
-		bool end_of_message;
 		RIO_BUF rio_buf;
 	};
 private:
@@ -307,7 +306,6 @@ public:
 			for(DWORD i = 0; i < payload_block_count; i++) {
 				TBlockHeader *header = reinterpret_cast<TBlockHeader*>
 					(&buffer[(next_seqno % block_count) * block_size]);
-				header->end_of_message = (i == (payload_block_count - 1)) ? true : false;
 				header->rio_buf.BufferId = bufferid;
 				header->rio_buf.Length = (i == (payload_block_count - 1)) ?
 					static_cast<ULONG>(buffer.size() % payload_block_size) : payload_block_size;
@@ -335,10 +333,6 @@ public:
 					size_t offset = buffer.size();
 					buffer.resize(buffer.size() + header->rio_buf.Length);
 					memcpy(&buffer[offset], &header[1], header->rio_buf.Length);
-					if(header->end_of_message) {
-						seqno = i + 1;
-						return true;
-					}
 				}
 			}
 			return false;
