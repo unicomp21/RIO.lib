@@ -37,14 +37,17 @@ public:
 
 ///////////////////
 class TIOCP;
-class TOverlapped {
+class TOverlapped : OVERLAPPED {
 	friend class TIOCP;
+public:
+	void Reset() { LPOVERLAPPED clear = this; memset(clear, 0, sizeof(OVERLAPPED)); }
 private:
-	TOverlapped() : iCompletion(NULL) { }
+	TOverlapped() : iCompletion(NULL) { Reset(); }
 private:
 	ICompletionResult *iCompletion;
 public:
 	TOverlapped(ICompletionResult *iCompletion) : iCompletion(iCompletion) {
+		Reset();
 	}
 };
 
