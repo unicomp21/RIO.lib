@@ -323,7 +323,11 @@ public:
 	}
 public:
 	bool ReadMessage(__int64 &seqno, __int64 topic, std::vector<char> &read_buffer) {
-		if(seqno < next_seqno) {
+		Verify(seqno >= 0);
+		if((next_seqno - seqno) >= block_count) {
+			Verify(false);
+			return false;
+		} else if(seqno < next_seqno) {
 			read_buffer.resize(0);
 			for(__int64 i = seqno; i < next_seqno; i++) {
 				TBlockHeader *header = reinterpret_cast<TBlockHeader*>
