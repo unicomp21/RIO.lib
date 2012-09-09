@@ -37,7 +37,7 @@ public:
 
 ////////////
 class TIOCP;
-class TOverlapped : OVERLAPPED {
+class TOverlapped : public OVERLAPPED {
 	friend class TIOCP;
 public:
 	void Reset() { LPOVERLAPPED clear = this; memset(clear, 0, sizeof(OVERLAPPED)); }
@@ -45,6 +45,8 @@ private:
 	TOverlapped() : iCompletion(NULL) { Reset(); }
 private:
 	ICompletionResult *iCompletion;
+public:
+	operator LPOVERLAPPED() { return this; }
 public:
 	TOverlapped(ICompletionResult *iCompletion) : iCompletion(iCompletion) {
 		Reset();
