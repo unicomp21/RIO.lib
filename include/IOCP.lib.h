@@ -29,12 +29,31 @@ public:
 	}
 };
 
+/////////////////////////
+class ICompletionResult {
+public:
+	virtual void Completed(BOOL status, DWORD byte_count);
+};
+
+///////////////////
+class TIOCP;
+class TOverlapped {
+	friend class TIOCP;
+private:
+	TOverlapped() : iCompletion(NULL) { }
+private:
+	ICompletionResult *iCompletion;
+public:
+	TOverlapped(ICompletionResult *iCompletion) : iCompletion(iCompletion) {
+	}
+};
+
 /////////////
 class TIOCP {
 private:
 	HANDLE hIOCP;
 public:
-	TIOCP() {
+	TIOCP() : running(true) {
 		hIOCP = ::CreateIoCompletionPort(
 			INVALID_HANDLE_VALUE, NULL, 0, 0);
 		Verify(NULL != hIOCP);
@@ -44,6 +63,44 @@ public:
 		HANDLE hCheck = ::CreateIoCompletionPort(
 			hStream, hIOCP, 0, 0);
 		Verify(NULL != hCheck);
+	}
+private:
+	volatile bool running;
+public:
+	void FlushQueue() {
+		LPOVERLAPPED lpOverlapped = NULL;
+		ULONG_PTR completion_key = 0;
+		DWORD byte_count = 0;
+		BOOL status = ::GetQueuedCompletionStatus(
+			hIOCP, &byte_count, &completion_key, &lpOverlapped, INFINITE);
+		TOverlapped *pOverlapped = reinterpret_cast<TOverlapped*>(lpOverlapped);
+		if(TRUE == status) {
+			Verify(NULL != pOverlapped->iCompletion);
+			pOverlapped->iCompletion->Completed(status, byte_count);
+		} else {
+			if(NULL != lpOverlapped) {
+				Verify(NULL != pOverlapped->iCompletion);
+				pOverlapped->iCompletion->Completed(status, byte_count);
+			} else {
+				//timeout
+			}
+		}
+	}
+public:
+	void Run() {
+		while(running) {
+			FlushQueue();
+		}
+	}
+public:
+	void Stop() {
+		__debugbreak();
+		//todo, running = false
+	}
+public:
+	void FlushQueueEx() {
+		__debugbreak();
+		//todo, GetQueuedCompletionStatusEx
 	}
 public:
 	~TIOCP() {
