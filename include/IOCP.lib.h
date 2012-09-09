@@ -111,9 +111,9 @@ public:
 };
 
 //////////////////////////
-class TWinsockExtentions {
+class TWinsockExtensions {
 public:
-	TWinsockExtentions() : lpfnTransmitFile(NULL), lpfnAcceptEx(NULL), lpfnGetAcceptExSockAddrs(NULL),
+	TWinsockExtensions() : lpfnTransmitFile(NULL), lpfnAcceptEx(NULL), lpfnGetAcceptExSockAddrs(NULL),
 		lpfnTransmitPackets(NULL), lpfnConnectEx(NULL), lpfnDisconnectEx(NULL), 
 		socket(INVALID_SOCKET) {}
 private:
@@ -314,7 +314,7 @@ public:
 };
 
 ///////////////////////////////////////////
-class TSocket : public TWinsockExtentions {
+class TSocket : public TWinsockExtensions {
 private:
 	SOCKET hSocket;
 private:
@@ -326,7 +326,7 @@ public:
 		hSocket = ::WSASocket(AF_INET, type, protocol,
 			NULL, 0, flags);
 		Verify(INVALID_SOCKET != hSocket);
-		TWinsockExtentions::Init(hSocket);
+		TWinsockExtensions::Init(hSocket);
 	}
 public:
 	operator HANDLE() { return reinterpret_cast<HANDLE>(hSocket); }
