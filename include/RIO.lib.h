@@ -269,7 +269,7 @@ private:
 private:
 	TRioExtensions rio_extensions;
 private:
-	std::vector<CHAR> buffer;
+	std::vector<CHAR> parent_buffer;
 private:
 	struct TBlockHeader {
 		__int64 seqno;
@@ -285,13 +285,16 @@ private:
 private:
 	DWORD block_count;
 private:
+	DWORD max_payload_size;
+private:
 	TRioBufferManager(SOCKET socket, DWORD block_count, DWORD block_size = 1024) : 
-		buffer(block_size * block_count), bufferid(RIO_INVALID_BUFFERID),
-		next_seqno(0), block_size(block_size), block_count(block_count)
+		parent_buffer(block_size * block_count), bufferid(RIO_INVALID_BUFFERID),
+		next_seqno(0), block_size(block_size), max_payload_size(block_size - sizeof(TBlockHeader)),
+		block_count(block_count)
 	{
 		rio_extensions.Init(socket);
 		bufferid = rio_extensions.RIORegisterBuffer(
-			&buffer[0], static_cast<DWORD>(block_size * block_count));
+			&parent_buffer[0], static_cast<DWORD>(block_size * block_count));
 		Verify(RIO_INVALID_BUFFERID != bufferid);
 	}
 private:
@@ -299,22 +302,19 @@ private:
 public:
 	__int64 current_seqno() { return next_seqno; }
 public:
-	bool WriteMessage(__int64 topic, std::vector<char> &buffer) {
-		DWORD payload_block_size = block_size - sizeof(TBlockHeader);
-		DWORD payload_block_count = static_cast<DWORD>(buffer.size() % payload_block_size) + 1;
-		if(payload_block_count < (block_count / 2)) {
-			for(DWORD i = 0; i < payload_block_count; i++) {
-				TBlockHeader *header = reinterpret_cast<TBlockHeader*>
-					(&buffer[(next_seqno % block_count) * block_size]);
-				header->rio_buf.BufferId = bufferid;
-				header->rio_buf.Length = (i == (payload_block_count - 1)) ?
-					static_cast<ULONG>(buffer.size() % payload_block_size) : payload_block_size;
-				header->rio_buf.Offset = (next_seqno % block_count) * block_size + 
-					sizeof(TBlockHeader);
-				header->seqno = next_seqno;
-				header->topic = topic;
-				next_seqno++;
-			}
+	DWORD get_block_size() { return block_size; }
+public:
+	bool WriteMessage(__int64 topic, std::vector<char> &write_buffer) {
+		if(write_buffer.size() < max_payload_size) {
+			TBlockHeader *header = reinterpret_cast<TBlockHeader*>
+				(&parent_buffer[(next_seqno % block_count) * block_size]);
+			header->rio_buf.BufferId = bufferid;
+			header->rio_buf.Length = static_cast<DWORD>(write_buffer.size());
+			header->rio_buf.Offset = 
+				(next_seqno % block_count) * block_size + sizeof(TBlockHeader);
+			header->seqno = next_seqno;
+			header->topic = topic;
+			next_seqno++;
 			return true;
 		} else {
 			Verify(false);
@@ -322,17 +322,17 @@ public:
 		}
 	}
 public:
-	bool ReadMessage(__int64 &seqno, __int64 topic, std::vector<char> &buffer) {
+	bool ReadMessage(__int64 &seqno, __int64 topic, std::vector<char> &read_buffer) {
 		if(seqno < next_seqno) {
-			buffer.resize(0);
+			read_buffer.resize(0);
 			for(__int64 i = seqno; i < next_seqno; i++) {
 				TBlockHeader *header = reinterpret_cast<TBlockHeader*>
-					(&buffer[(i % block_count) * block_size]);
+					(&parent_buffer[(i % block_count) * block_size]);
 				if(header->topic == topic) {
 					char *payload = reinterpret_cast<char*>(&header[1]);
-					size_t offset = buffer.size();
-					buffer.resize(buffer.size() + header->rio_buf.Length);
-					memcpy(&buffer[offset], &header[1], header->rio_buf.Length);
+					read_buffer.resize(header->rio_buf.Length);
+					memcpy(&read_buffer[0], &header[1], header->rio_buf.Length);
+					return true;
 				}
 			}
 			return false;
