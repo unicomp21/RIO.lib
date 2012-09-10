@@ -7,9 +7,35 @@
 #include <stdio.h>
 #include <memory>
 #include <vector>
+#include <sstream>
+#include <rpc.h>
 
 // Need to link with Ws2_32.lib
-#pragma comment(lib, "Ws2_32.lib")
+#pragma comment(lib, "Ws2_32")
+#pragma comment(lib, "rpcrt4")
+
+/////////////
+class TUUID {
+private:
+	UUID uuid;
+public:
+	TUUID() {
+		UUID clear = { 0 };
+		uuid = clear;
+		RPC_STATUS status = ::UuidCreate(&uuid);
+		Verify(RPC_S_OK == status);
+	}
+public:
+	operator std::string() {
+		RPC_CSTR buffer = NULL;
+		RPC_STATUS status = ::UuidToStringA(&uuid, &buffer);
+		Verify(RPC_S_OK == status);
+		std::string out(reinterpret_cast<char*>(buffer));
+		status = ::RpcStringFreeA(&buffer);
+		Verify(RPC_S_OK == status);
+		return out;
+	}
+};
 
 ///////////////////
 class TWSAStartup {
