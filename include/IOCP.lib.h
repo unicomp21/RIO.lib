@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 #include <sstream>
+#include <hash_map>
 #include <rpc.h>
 
 // Need to link with Ws2_32.lib
