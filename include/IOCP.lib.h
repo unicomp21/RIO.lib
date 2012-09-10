@@ -481,3 +481,16 @@ class ISessionManager {
 };
 
 ////////////////
+class TSession {
+public:
+	TUUID id;
+private:
+	ISessionManager *iSessionManager;
+private:
+	TSession() { }
+public:
+	TSession(ISessionManager *iSessionManager) :
+		iSessionManager(iSessionManager) { }
+};
+
+//////////////////////
