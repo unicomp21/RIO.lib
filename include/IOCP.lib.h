@@ -494,3 +494,65 @@ public:
 };
 
 //////////////////////
+class TBufferManager {
+private:
+	int block_count;
+private:
+	int block_size;
+private:
+	__int64 next_seqno;
+private:
+	std::vector<char> parent_buffer;
+public:
+	TBufferManager(int block_count, int block_size = 1024) :
+		block_count(block_count), block_size(block_size),
+		next_seqno(0), parent_buffer(block_count * block_size) { }
+public:
+	struct TBlock {
+		DWORD topic;
+		DWORD size;
+	};
+public:
+	__int64 current_seqno() { return next_seqno; }
+public:
+	DWORD get_block_size() { return block_size; }
+public:
+	bool WriteMessage(DWORD topic, std::vector<char> &write_buffer) {
+		DWORD max_payload = block_size - sizeof(TBlock);
+		if(parent_buffer.size() >= max_payload) {
+			Verify(false);
+			return false;
+		} else {
+			DWORD mod_block_count = static_cast<DWORD>(next_seqno % block_count);
+			memcpy(&parent_buffer[mod_block_count * block_size], 
+				&write_buffer[0], write_buffer.size());
+			return true;
+		}
+	}
+public:
+	bool ReadMessage(__int64 &start_seqno, DWORD topic, std::vector<char> &read_buffer) {
+		for(; start_seqno < next_seqno; start_seqno++) {
+			DWORD mod_block_count = static_cast<DWORD>(next_seqno % block_count);
+			TBlock *block = reinterpret_cast<TBlock*>(&parent_buffer[mod_block_count * block_size]);
+			if(topic == block->topic) {
+				read_buffer.resize(block->size);
+				memcpy(&read_buffer[0], &block[1], block->size);
+				return true;
+			}
+		}
+		return false;
+	}
+public:
+	TBlock *GetBlock(__int64 &start_seqno, DWORD topic) {
+		for(; start_seqno < next_seqno; start_seqno++) {
+			DWORD mod_block_count = static_cast<DWORD>(next_seqno % block_count);
+			TBlock *block = reinterpret_cast<TBlock*>(&parent_buffer[mod_block_count * block_size]);
+			if(topic == block->topic) {
+				return block;
+			}
+		}
+		return NULL;
+	}
+};
+
+///////////////////////
