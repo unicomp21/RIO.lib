@@ -556,3 +556,11 @@ public:
 };
 
 ///////////////////////
+class TSessionManager {
+private:
+	std::hash_map<std::string /* uuid */, TSession> sessions;
+private:
+	TBufferManager bufferManager;
+public:
+	//todo
+};
