@@ -414,20 +414,27 @@ public:
 		Verify(SOCKET_ERROR != check);
 
 		for(int i = 0; i < depth; i++) {
-			TOverlappedListener *overlapped = new TOverlappedListener(this);
-			BOOL check = acceptor->AcceptEx(*overlapped->acceptee, 
-				&overlapped->addresses_buffer[0], 0,
+			TOverlappedListener *overlapped_listener = new TOverlappedListener(this);
+			BOOL check = acceptor->AcceptEx(*overlapped_listener->acceptee, 
+				&overlapped_listener->addresses_buffer[0], 0,
 				TOverlappedListener::address_reserve, TOverlappedListener::address_reserve, 
-				&overlapped->byte_count, overlapped);
+				&overlapped_listener->byte_count, overlapped_listener);
 			if(FALSE == check)
 				Verify(ERROR_IO_PENDING == ::WSAGetLastError());
 		}
 	}
 private:
 	virtual void ICompletionResult::Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped) {
-		std::auto_ptr<TOverlappedListener> overlapped_listener(
+		std::auto_ptr<TOverlappedListener> prev_overlapped_listener(
 			reinterpret_cast<TOverlappedListener*>(overlapped));
-		Accepted(status, std::shared_ptr<TSocket>(overlapped_listener->acceptee));
+		Accepted(status, std::shared_ptr<TSocket>(prev_overlapped_listener->acceptee));
+		TOverlappedListener *next_overlapped_listener = new TOverlappedListener(this);
+		BOOL check = acceptor->AcceptEx(*next_overlapped_listener->acceptee, 
+			&next_overlapped_listener->addresses_buffer[0], 0,
+			TOverlappedListener::address_reserve, TOverlappedListener::address_reserve, 
+			&next_overlapped_listener->byte_count, *next_overlapped_listener);
+		if(FALSE == check)
+			Verify(ERROR_IO_PENDING == ::WSAGetLastError());
 	}
 public:
 	virtual void Accepted(BOOL status, std::shared_ptr<TSocket> socket) = 0;
