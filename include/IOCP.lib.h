@@ -351,8 +351,6 @@ private:
 private:
 	TSocket() {}
 public:
-	enum TSocketType { TCP = 1, UDP = 2 };
-public:
 	TSocket(int type, int protocol, int flags) : hSocket(NULL) {
 		hSocket = ::WSASocket(AF_INET, type, protocol,
 			NULL, 0, flags);
