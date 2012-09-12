@@ -27,6 +27,8 @@ public:
 		Verify(RPC_S_OK == status);
 	}
 public:
+	operator UUID() { return uuid; }
+public:
 	operator std::string() {
 		RPC_CSTR buffer = NULL;
 		RPC_STATUS status = ::UuidToStringA(&uuid, &buffer);
