@@ -376,6 +376,25 @@ public:
 	}
 };
 
+/////////////////////////////////////
+class TOverlappedRecv : TOverlapped {
+private:
+	TOverlappedRecv() { }
+public:
+	TOverlappedRecv(ICompletionResult *iCompletionResult, size_t buffer_size) : 
+		TOverlapped(iCompletionResult), buffer(buffer_size) { }
+public:
+	std::vector<char> buffer;
+};
+
+/////////////////////////////////////
+class TOverlappedSend : TOverlapped {
+private:
+	TOverlappedSend() { }
+public:
+	TOverlappedSend(ICompletionResult *iCompletionResult) { }
+};
+
 ///////////////////////////////////////////////
 class TListenerEx : private ICompletionResult {
 private:
@@ -440,7 +459,7 @@ public:
 	virtual void Accepted(BOOL status, std::shared_ptr<TSocket> socket) = 0;
 };
 
-/////////////////////////////////////
+/////////////////////////////////////////////
 class TClientEx : private ICompletionResult {
 private:
 	SOCKADDR_IN addr;
