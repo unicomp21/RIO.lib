@@ -261,11 +261,11 @@ public:
 	}
 };
 
-/////////////////////////
-class TRioBufferManager {
+/////////////////////////////
+class TRioRingBufferManager {
 	friend class TRioSocketQueue;
 private:
-	TRioBufferManager() { }
+	TRioRingBufferManager() { }
 private:
 	TRioExtensions rio_extensions;
 private:
@@ -287,7 +287,7 @@ private:
 private:
 	DWORD max_payload_size;
 private:
-	TRioBufferManager(SOCKET socket, DWORD block_count, DWORD block_size = 1024) : 
+	TRioRingBufferManager(SOCKET socket, DWORD block_count, DWORD block_size = 1024) : 
 		parent_buffer(block_size * block_count), bufferid(RIO_INVALID_BUFFERID),
 		next_seqno(0), block_size(block_size), max_payload_size(block_size - sizeof(TBlockHeader)),
 		block_count(block_count)
@@ -347,7 +347,7 @@ public:
 		}
 	}
 public:
-	~TRioBufferManager() {
+	~TRioRingBufferManager() {
 		rio_extensions.RIODeregisterBuffer(bufferid);
 	}
 };
@@ -424,10 +424,10 @@ public:
 public:
 	operator TSocket&() { return socket; }
 public:
-	std::shared_ptr<TRioBufferManager> CreateBufferManager(DWORD block_count, DWORD block_size = 1024) {
-		std::shared_ptr<TRioBufferManager> buffer_manager =
-			std::shared_ptr<TRioBufferManager>(
-			new TRioBufferManager(socket, block_count, block_size));
+	std::shared_ptr<TRioRingBufferManager> CreateRingBufferManager(DWORD block_count, DWORD block_size = 1024) {
+		std::shared_ptr<TRioRingBufferManager> buffer_manager =
+			std::shared_ptr<TRioRingBufferManager>(
+			new TRioRingBufferManager(socket, block_count, block_size));
 		return buffer_manager;
 	}
 public:
