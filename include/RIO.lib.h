@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IOCP.lib.h"
+#include <set>
 
 //////////////////////////////////////
 class TRioSocketTcp : public TSocket {
@@ -348,6 +349,69 @@ public:
 	}
 public:
 	~TRioRingBufferManager() {
+		rio_extensions.RIODeregisterBuffer(bufferid);
+	}
+};
+
+/////////////////////////
+class TRioBufferManager {
+	friend class TRioSocketQueue;
+	friend class TBuffer;
+public:
+	class TBuffer : public RIO_BUF {
+	private:
+		int block_id;
+	private:
+		TRioBufferManager *rioBufferManager;
+	private:
+		TBuffer() { }
+	public:
+		TBuffer(int block_id, TRioBufferManager *rioBufferManager) : 
+			block_id(block_id), rioBufferManager(rioBufferManager) { }
+	public:
+		int get_block_id() { return block_id; }
+	public:
+		~TBuffer() { rioBufferManager->free_blocks.insert(block_id); }
+	};
+private:
+	TRioBufferManager() { }
+private:
+	TRioExtensions rio_extensions;
+private:
+	std::vector<CHAR> parent_buffer;
+private:
+	RIO_BUFFERID bufferid;
+public:
+	operator RIO_BUFFERID() { return bufferid; }
+private:
+	DWORD block_size;
+private:
+	DWORD block_count;
+private:
+	std::set<int> free_blocks;
+private:
+	TRioBufferManager(SOCKET socket, DWORD block_count, DWORD block_size = 1024) : 
+		parent_buffer(block_size * block_count), bufferid(RIO_INVALID_BUFFERID),
+		block_size(block_size),	block_count(block_count)
+	{
+		rio_extensions.Init(socket);
+		bufferid = rio_extensions.RIORegisterBuffer(
+			&parent_buffer[0], static_cast<DWORD>(block_size * block_count));
+		Verify(RIO_INVALID_BUFFERID != bufferid);
+		for(DWORD i = 0; i < block_count; i++)
+			free_blocks.insert(i);
+	}
+public:
+	DWORD get_block_size() { return block_size; }
+public:
+	std::shared_ptr<TBuffer> Alloc() {
+		Verify(free_blocks.size() > 0);
+		int block_id = *free_blocks.begin();
+		free_blocks.erase(block_id);
+		return std::shared_ptr<TBuffer>(new TBuffer(block_id, this));
+	}
+public:
+	~TRioBufferManager() {
 		rio_extensions.RIODeregisterBuffer(bufferid);
 	}
 };
