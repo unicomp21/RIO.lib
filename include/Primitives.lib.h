@@ -3,6 +3,7 @@
 #define WIN32_LEAN_AND_MEAN
 
 #include <Windows.h>
+#include <map>
 
 ////////////////////////////////
 inline void Verify(bool check) {
@@ -29,3 +30,6 @@ public:
 	}
 };
 
+/////////////////////////////////////////////////////
+class TMessage : std::map<std::string, std::string> {
+};

@@ -60,6 +60,8 @@ public:
 
 /////////////////////////
 class TOverlapped;
+
+/////////////////////////
 class ICompletionResult {
 public:
 	virtual void Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped) = 0;
@@ -67,6 +69,8 @@ public:
 
 ////////////
 class TIOCP;
+
+///////////////////////////////////////
 class TOverlapped : public OVERLAPPED {
 	friend class TIOCP;
 public:
@@ -143,6 +147,14 @@ public:
 		Verify(TRUE == check);
 		hIOCP = NULL;
 	}
+};
+
+////////////////////
+class TIOCPEvented {
+public:
+	TEvent completions_waiting;
+public:
+	TIOCP completion_port;
 };
 
 //////////////////////////
@@ -504,6 +516,7 @@ public:
 
 ///////////////////////
 class ISessionManager {
+	//todo
 };
 
 ////////////////

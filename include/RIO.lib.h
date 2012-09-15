@@ -2,6 +2,7 @@
 
 #include "IOCP.lib.h"
 #include <set>
+#include <hash_map>
 
 //////////////////////////////////////
 class TRioSocketTcp : public TSocket {
@@ -425,7 +426,9 @@ private:
 	TRioExtensions rio_extensions;
 private:
 	RIO_CQ cq;
-private:
+public:
+	operator RIO_CQ() { return cq; }
+public:
 	TRioCompletionQueue(SOCKET socket, DWORD queue_size, HANDLE hEvent) : cq(RIO_INVALID_CQ) {
 		rio_extensions.Init(socket);
 		RIO_NOTIFICATION_COMPLETION notification_completion;
@@ -466,6 +469,23 @@ public:
 	~TRioCompletionQueue() {
 		rio_extensions.RIOCloseCompletionQueue(cq);
 		cq = RIO_INVALID_CQ;
+	}
+};
+
+//////////////////////////////////
+class TRioCompletionQueueEvented {
+private:
+	std::shared_ptr<TRioCompletionQueue> completion_queue;
+public:
+	std::shared_ptr<TRioCompletionQueue> completions() {
+		return completion_queue;
+	}
+public:
+	TEvent completions_waiting;
+public:
+	TRioCompletionQueueEvented(SOCKET socket, DWORD queue_size) {
+		completion_queue = std::shared_ptr<TRioCompletionQueue>(
+			new TRioCompletionQueue(socket, queue_size, completions_waiting));
 	}
 };
 
@@ -599,6 +619,7 @@ public:
 
 ///////////////////////////////////////////////////
 class TRioSocketQueueTcp : public TRioSocketQueue {
+public:
 	TRioSocketQueueTcp(unsigned long depth, RIO_CQ cq, int type = SOCK_STREAM, int protocol = IPPROTO_TCP) : 
 		TRioSocketQueue(type, protocol, depth, cq) {
 	}
@@ -606,7 +627,108 @@ class TRioSocketQueueTcp : public TRioSocketQueue {
 
 ///////////////////////////////////////////////////
 class TRioSocketQueueUdp : public TRioSocketQueue {
+public:
 	TRioSocketQueueUdp(unsigned long depth, RIO_CQ cq, int type = SOCK_DGRAM, int protocol = IPPROTO_UDP) :
 		TRioSocketQueue(type, protocol, depth, cq) {
+	}
+};
+
+///////////////////
+class TRioSession {
+public:
+	UUID id;
+private:
+	enum { socket_queue_depth = 16 };
+private:
+	TRioSocketQueueTcp socket_queue;
+public:
+	TRioSession(std::shared_ptr<TRioCompletionQueue> completion_queue) : 
+		socket_queue(socket_queue_depth, *completion_queue) { }
+public:
+	void SendMessage(UUID session_id, TMessage &message) {
+		//todo
+	}
+};
+typedef std::shared_ptr<TRioSession> TRioSessionPtr;
+
+////////////////////
+class IRecvMessage {
+public:
+	virtual void RecvMessage(TMessage &message) = 0;
+};
+
+//////////////////////
+class ISessionNotify {
+public:
+	virtual void SessionOpened(std::string session_id) = 0;
+public:
+	virtual void SessionClosed(std::string session_id) = 0;
+};
+
+///////////////////////////////////////////////
+class ICloseSessionCallback : ICompletionResult
+{ };
+
+//////////////////////////////////////////////
+class ISendMessageCallback : ICompletionResult
+{ };
+
+//////////////////////////////////////////
+class IConnectCallback : ICompletionResult
+{ };
+
+//////////////////////////
+class TRioSessionManager {
+private:
+	std::hash_map<std::string /*uuid*/, TRioSessionPtr> sessions;
+private:
+	TRioSessionManager() { }
+private:
+	IRecvMessage *iRecvMessage;
+private:
+	TIOCPEvented iocp;
+private:
+	std::shared_ptr<TRioCompletionQueueEvented> rio_cq;
+public:
+	TRioSessionManager(IRecvMessage *iRecvMessage, ISessionNotify *iSessionNotify) :
+		iRecvMessage(iRecvMessage)
+	{
+		Verify(NULL != iRecvMessage);
+	}
+private:
+	enum { max_completion_queue = 1024 * 1024 };
+private:
+	void Init(SOCKET socket) {
+		if(!rio_cq) {
+			rio_cq = std::shared_ptr<TRioCompletionQueueEvented>(
+				new TRioCompletionQueueEvented(socket, max_completion_queue));
+		}
+	}
+public:
+	void Listen(std::string intfc, short port, int accept_depth) {
+		SOCKET socket = NULL;
+		//todo
+		Init(socket);
+	}
+public:
+	void Connect(std::string intfc, std::string remote_address, 
+		short remote_port, IConnectCallback *iConnectCallback) 
+	{
+		SOCKET socket = NULL;
+		//todo
+		Init(socket);
+	}
+public:
+	void SendMesage(std::string session_id, TMessage &message, ISendMessageCallback *iSendMessageCallback) {
+		//todo
+	}
+public:
+	void CloseSession(std::string session_id, ICloseSessionCallback *iCloseSessionCallback) {
+		//todo
+	}
+public:
+	void RecvMessageCallback(IRecvMessage *iRecvMessage) {
+		Verify(NULL != iRecvMessage);
+		this->iRecvMessage = iRecvMessage;
 	}
 };
