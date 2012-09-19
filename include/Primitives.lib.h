@@ -45,11 +45,12 @@ private:
 private:
 	std::string in_buffer;
 public:
-	size_t /*end_offset*/ get(std::vector<char> &buffer, size_t start_offset, __int64 *num) {
+	size_t /*end_offset*/ Read(std::vector<char> &buffer, size_t start_offset, __int64 *num) {
 		in_buffer.clear();
 		Verify(start_offset < buffer.size());
 		size_t len = buffer[start_offset] - '0';
 		start_offset++;
+		Verify((start_offset + len) < buffer.size());
 		in_buffer.insert(0, buffer.at(start_offset), buffer.at(start_offset + len));
 		int val = 0;
 		in_reader.str(in_buffer);
@@ -61,7 +62,7 @@ private:
 private:
 	std::string out_buffer;
 public:
-	size_t /*end_offset*/ append(std::vector<char> &buffer, __int64 val) {
+	void Append(std::vector<char> &buffer, __int64 val) {
 		out_writer.str("");
 		out_writer << val;
 		Verify(out_writer.str().length() >= 9);
@@ -74,4 +75,47 @@ public:
 
 /////////////////////////////////////////////////////
 class TMessage : std::map<std::string, std::string> {
+private:
+	TNumber number;
+public:
+	TMessage() { }
+private:
+	std::string key, val;
+public:
+	size_t Read(std::vector<char> &buffer, size_t offset) {
+		__int64 count = 0;
+		offset = number.Read(buffer, offset, &count);
+		__int64 len_key = 0, len_val = 0;
+		for(__int64 i = 0; i < count; i++) {
+			len_key = 0;
+			offset = number.Read(buffer, offset, &len_key);
+			key.clear(); key.insert(key.begin(), buffer.at(offset), buffer.at(offset + static_cast<size_t>(len_key)));
+			offset += static_cast<size_t>(len_key);
+			len_val = 0;
+			offset = number.Read(buffer, offset, &len_val);
+			val.clear(); val.insert(val.begin(), buffer.at(offset), buffer.at(offset + static_cast<size_t>(len_val)));
+			offset += static_cast<size_t>(len_val);
+			(*this)[key] = val;
+		}
+		return offset;
+	}
+public:
+	void Append(std::vector<char> &buffer) {
+		number.Append(buffer, this->size());
+		for(iterator iter = begin(); iter != end(); iter++) {
+			const std::string &key = iter->first;
+			number.Append(buffer, key.length());
+			buffer.insert(buffer.end(), key.begin(), key.end());
+			std::string &val = iter->second;
+			number.Append(buffer, val.length());
+			buffer.insert(buffer.end(), val.begin(), val.end());
+		}
+	}
+public:
+	void Dump(std::ostream out) {
+		for(iterator iter = begin(); iter != end(); iter++) {
+			out << iter->first << ": " << iter->second << std::endl;
+		}
+		out << std::endl;
+	}
 };
