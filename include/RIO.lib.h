@@ -508,7 +508,8 @@ public:
 public:
 	operator TSocket&() { return socket; }
 public:
-	std::shared_ptr<TRioRingBufferManager> CreateRingBufferManager(DWORD block_count, DWORD block_size = 1024) {
+	std::shared_ptr<TRioRingBufferManager> CreateRingBufferManager(
+		DWORD block_count, DWORD block_size = 1024) {
 		std::shared_ptr<TRioRingBufferManager> buffer_manager =
 			std::shared_ptr<TRioRingBufferManager>(
 			new TRioRingBufferManager(socket, block_count, block_size));
@@ -620,7 +621,8 @@ public:
 ///////////////////////////////////////////////////
 class TRioSocketQueueTcp : public TRioSocketQueue {
 public:
-	TRioSocketQueueTcp(unsigned long depth, RIO_CQ cq, int type = SOCK_STREAM, int protocol = IPPROTO_TCP) : 
+	TRioSocketQueueTcp(unsigned long depth, RIO_CQ cq,
+		int type = SOCK_STREAM, int protocol = IPPROTO_TCP) : 
 		TRioSocketQueue(type, protocol, depth, cq) {
 	}
 };
@@ -628,7 +630,8 @@ public:
 ///////////////////////////////////////////////////
 class TRioSocketQueueUdp : public TRioSocketQueue {
 public:
-	TRioSocketQueueUdp(unsigned long depth, RIO_CQ cq, int type = SOCK_DGRAM, int protocol = IPPROTO_UDP) :
+	TRioSocketQueueUdp(unsigned long depth, RIO_CQ cq,
+		int type = SOCK_DGRAM, int protocol = IPPROTO_UDP) :
 		TRioSocketQueue(type, protocol, depth, cq) {
 	}
 };
@@ -719,7 +722,8 @@ public:
 		Init(socket);
 	}
 public:
-	void SendMesage(std::string session_id, TMessage &message, ISendMessageCallback *iSendMessageCallback) {
+	void SendMesage(std::string session_id, TMessage &message,
+		ISendMessageCallback *iSendMessageCallback) {
 		//todo
 	}
 public:
