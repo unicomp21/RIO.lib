@@ -720,7 +720,7 @@ private:
 			std::string intfc, short port, int depth) :
 			TListenerEx(intfc, port, depth), rioSessionManager(rioSessionManager) { }
 	private:
-		void TListenerEx::Accepted(BOOL status, std::shared_ptr<TSocket> socket) {
+		void TListenerEx::Accepted(BOOL status, ISocketPtr socket) {
 			Verify(TRUE == status);
 			rioSessionManager->NewServerSession(socket);
 		}
@@ -728,7 +728,7 @@ private:
 	typedef std::shared_ptr<TSessionListenerEx> TSessionListenerExPtr;
 	std::hash_map<std::string, TSessionListenerExPtr> listeners;
 private:
-	void NewServerSession(std::shared_ptr<TSocket> socket) {
+	void NewServerSession(ISocketPtr socket) {
 		//todo
 	}
 public:

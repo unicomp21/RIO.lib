@@ -1,11 +1,7 @@
 #pragma once
 
 #include "Primitives.lib.h"
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <mswsock.h>
 #include <stdio.h>
-#include <memory>
 #include <vector>
 #include <sstream>
 #include <hash_map>
@@ -56,15 +52,6 @@ public:
 		int err = ::WSACleanup();
 		Verify(0 == err);
 	}
-};
-
-/////////////////////////
-class TOverlapped;
-
-/////////////////////////
-class ICompletionResult {
-public:
-	virtual void Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped) = 0;
 };
 
 ////////////
@@ -356,8 +343,8 @@ protected:
 	}
 };
 
-///////////////////////////////////////////
-class TSocket : public TWinsockExtensions {
+///////////////////////////////////////////////////////////
+class TSocket : public TWinsockExtensions, public ISocket {
 private:
 	SOCKET hSocket;
 private:
@@ -420,14 +407,14 @@ private:
 	public:
 		DWORD byte_count;
 	public:
-		std::shared_ptr<TSocket> acceptee;
+		ISocketPtr acceptee;
 	private:
 		TOverlappedListener() : byte_count(0) { }
 	public:
 		TOverlappedListener(ICompletionResult *ICompletionResult) : 
 			byte_count(0), addresses_buffer(2 * address_reserve),
 			TOverlapped(ICompletionResult) {
-			acceptee = std::shared_ptr<TSocket>(new TSocketTcp());
+			acceptee = ISocketPtr(new TSocketTcp());
 		}
 	};
 private:
@@ -462,7 +449,7 @@ private:
 	void ICompletionResult::Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped) {
 		std::auto_ptr<TOverlappedListener> prev_overlapped_listener(
 			reinterpret_cast<TOverlappedListener*>(overlapped));
-		Accepted(status, std::shared_ptr<TSocket>(prev_overlapped_listener->acceptee));
+		Accepted(status, prev_overlapped_listener->acceptee);
 		TOverlappedListener *next_overlapped_listener = new TOverlappedListener(this);
 		BOOL check = acceptor->AcceptEx(*next_overlapped_listener->acceptee, 
 			&next_overlapped_listener->addresses_buffer[0], 0,
@@ -472,7 +459,7 @@ private:
 			Verify(ERROR_IO_PENDING == ::WSAGetLastError());
 	}
 public:
-	virtual void Accepted(BOOL status, std::shared_ptr<TSocket> socket) = 0;
+	virtual void Accepted(BOOL status, ISocketPtr socket) = 0;
 };
 
 /////////////////////////////////////////////

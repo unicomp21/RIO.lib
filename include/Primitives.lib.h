@@ -2,10 +2,13 @@
 
 #define WIN32_LEAN_AND_MEAN
 
-#include <Windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <mswsock.h>
 #include <map>
 #include <vector>
 #include <sstream>
+#include <memory>
 
 ////////////////////////////////
 inline void Verify(bool check) {
@@ -119,3 +122,24 @@ public:
 		out << std::endl;
 	}
 };
+
+/////////////////////////
+class TOverlapped;
+
+/////////////////////////
+class ICompletionResult {
+public:
+	virtual void Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped) = 0;
+};
+
+///////////////
+class ISocket {
+public:
+	virtual operator HANDLE() = 0;
+public:
+	virtual operator SOCKET() = 0;
+public:
+	virtual ~ISocket() { }
+};
+
+typedef std::shared_ptr<ISocket> ISocketPtr;
