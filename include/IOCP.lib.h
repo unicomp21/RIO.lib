@@ -408,7 +408,9 @@ public:
 };
 
 ///////////////////////////////////////////////
-class TListenerEx : private ICompletionResult {
+class TListenerEx : public ICompletionResult {
+public:
+	TListenerEx() { ::__debugbreak(); }
 private:
 	class TOverlappedListener : public TOverlapped {
 	public:
@@ -430,6 +432,8 @@ private:
 	};
 private:
 	std::shared_ptr<TSocketTcp> acceptor;
+public:
+	operator SOCKET() { return *acceptor; }
 public:
 	TListenerEx(std::string intfc, short port, int depth) {
 		acceptor = std::shared_ptr<TSocketTcp>(new TSocketTcp());
@@ -455,7 +459,7 @@ public:
 		}
 	}
 private:
-	virtual void ICompletionResult::Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped) {
+	void ICompletionResult::Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped) {
 		std::auto_ptr<TOverlappedListener> prev_overlapped_listener(
 			reinterpret_cast<TOverlappedListener*>(overlapped));
 		Accepted(status, std::shared_ptr<TSocket>(prev_overlapped_listener->acceptee));
@@ -472,13 +476,17 @@ public:
 };
 
 /////////////////////////////////////////////
-class TClientEx : private ICompletionResult {
+class TClientEx : public ICompletionResult {
 private:
 	SOCKADDR_IN addr;
 private:
 	std::shared_ptr<TSocketTcp> connector;
+public:
+	operator SOCKET() { return *connector; }
 private:
 	std::shared_ptr<TOverlapped> connect_notify;
+public:
+	TClientEx() { ::__debugbreak(); }
 public:
 	TClientEx(TIOCP &iocp, std::string intfc, short port)
 	{
@@ -500,11 +508,12 @@ public:
 			Verify(ERROR_IO_PENDING == ::WSAGetLastError());
 	}
 private:
-	virtual void Completed(BOOL status, DWORD byte_count) {
-		Connected(status);
+	void ICompletionResult::Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped) {
+		Verify(0 == byte_count);
+		Connected(status, connector);
 	}
 protected:
-	virtual void Connected(BOOL status) = 0;
+	virtual void Connected(BOOL status, std::shared_ptr<TSocket> socket) = 0;
 };
 
 ///////////////////////////////////
