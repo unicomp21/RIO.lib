@@ -5,10 +5,15 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <mswsock.h>
+#include <Windows.h>
 #include <map>
 #include <vector>
 #include <sstream>
 #include <memory>
+
+//////////////////////////////
+#pragma comment(lib, "Ws2_32")
+#pragma comment(lib, "rpcrt4")
 
 ////////////////////////////////
 inline void Verify(bool check) {
@@ -139,7 +144,50 @@ public:
 public:
 	virtual operator SOCKET() = 0;
 public:
+	virtual BOOL TransmitFile(HANDLE hFile,	DWORD nNumberOfBytesToWrite,
+		DWORD nNumberOfBytesPerSend, LPOVERLAPPED lpOverlapped,
+		LPTRANSMIT_FILE_BUFFERS lpTransmitBuffers, DWORD dwReserved) = 0;
+public:
+	virtual BOOL AcceptEx(SOCKET sAcceptSocket,	PVOID lpOutputBuffer,
+		DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength,
+		LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped) = 0;
+public:
+	virtual void GetAcceptExSockAddrs(PVOID lpOutputBuffer,	DWORD dwReceiveDataLength,
+		DWORD dwLocalAddressLength,	DWORD dwRemoteAddressLength, struct sockaddr **LocalSockaddr,
+		LPINT LocalSockaddrLength, struct sockaddr **RemoteSockaddr, LPINT RemoteSockaddrLength) = 0;
+public:
+	virtual BOOL TransmitPackets(LPTRANSMIT_PACKETS_ELEMENT lpPacketArray,                               
+		DWORD nElementCount, DWORD nSendSize, LPOVERLAPPED lpOverlapped,                  
+		DWORD dwFlags) = 0;
+public:
+	virtual BOOL ConnectEx(const struct sockaddr FAR *name,
+		int namelen, PVOID lpSendBuffer, DWORD dwSendDataLength,
+		LPDWORD lpdwBytesSent, LPOVERLAPPED lpOverlapped) = 0;
+public:
+	virtual BOOL DisconnectEx(LPOVERLAPPED lpOverlapped, DWORD  dwFlags, DWORD  dwReserved) = 0;
+public:
+	virtual BOOL Send(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) = 0;
+public:
+	virtual BOOL Recv(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) = 0;
+public:
 	virtual ~ISocket() { }
 };
 
 typedef std::shared_ptr<ISocket> ISocketPtr;
+
+///////////////////////
+class IIOCPEvented {
+public:
+	virtual void Attach(HANDLE hChild) = 0;
+public:
+	virtual void FlushQueue() = 0;
+public:
+	virtual void Run() = 0;
+public:
+	virtual void Stop() = 0;
+public:
+	virtual void FlushQueueEx() = 0;
+};
+
+typedef std::shared_ptr<IIOCPEvented> IIOCPEventedPtr;
+

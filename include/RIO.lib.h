@@ -7,14 +7,12 @@
 //////////////////////////////////////
 class TRioSocketTcp : public TSocket {
 	TRioSocketTcp() : TSocket(SOCK_STREAM, IPPROTO_TCP, WSA_FLAG_REGISTERED_IO) {
-		Init(*this);
 	}
 };
 
 //////////////////////////////////////
 class TRioSocketUdp : public TSocket {
 	TRioSocketUdp() : TSocket(SOCK_DGRAM, IPPROTO_UDP, WSA_FLAG_REGISTERED_IO) {
-		Init(*this);
 	}
 };
 
@@ -492,27 +490,27 @@ public:
 ///////////////////////
 class TRioSocketQueue {
 private:
-	TSocket socket;
+	ISocketPtr socket;
 private:
 	TRioExtensions rio_extensions;
 private:
 	RIO_RQ rq;
 public:
-	TRioSocketQueue(int type, int protocol, unsigned long depth, RIO_CQ completion_queue) : 
-		socket(type, protocol, WSA_FLAG_REGISTERED_IO), rq(NULL) {
-		rio_extensions.Init(socket);
+	TRioSocketQueue(int type, int protocol, unsigned long depth, RIO_CQ completion_queue) : rq(NULL) {
+		socket = ISocketPtr(new TSocket(type, protocol, WSA_FLAG_REGISTERED_IO));
+		rio_extensions.Init(*socket);
 		rq = rio_extensions.RIOCreateRequestQueue(
 			depth, 1, depth, 1, completion_queue, completion_queue, NULL);
 		Verify(RIO_INVALID_RQ != rq);
 	}
 public:
-	operator TSocket&() { return socket; }
+	operator SOCKET() { return *socket; }
 public:
 	std::shared_ptr<TRioRingBufferManager> CreateRingBufferManager(
 		DWORD block_count, DWORD block_size = 1024) {
 		std::shared_ptr<TRioRingBufferManager> buffer_manager =
 			std::shared_ptr<TRioRingBufferManager>(
-			new TRioRingBufferManager(socket, block_count, block_size));
+			new TRioRingBufferManager(*socket, block_count, block_size));
 		return buffer_manager;
 	}
 public:
@@ -520,7 +518,7 @@ public:
 		DWORD queue_size, HANDLE hEvent)
 	{
 		std::shared_ptr<TRioCompletionQueue> completion_queue =
-			std::shared_ptr<TRioCompletionQueue>(new TRioCompletionQueue(socket, queue_size, hEvent));
+			std::shared_ptr<TRioCompletionQueue>(new TRioCompletionQueue(*socket, queue_size, hEvent));
 		return completion_queue;
 	}
 public:
@@ -689,15 +687,15 @@ private:
 private:
 	IRecvMessage *iRecvMessage;
 private:
-	TIOCPEvented iocp;
+	IIOCPEventedPtr iocp;
 private:
 	std::shared_ptr<TRioCompletionQueueEvented> rio_cq;
 private:
 	int max_completion_queue;
 public:
 	TRioSessionManager(IRecvMessage *iRecvMessage, ISessionNotify *iSessionNotify,
-		int max_completion_queue = 1024 * 1024) :
-		iRecvMessage(iRecvMessage), max_completion_queue(max_completion_queue)
+		IIOCPEventedPtr iocp, int max_completion_queue = 1024 * 1024) :
+		iRecvMessage(iRecvMessage), iocp(iocp), max_completion_queue(max_completion_queue)
 	{
 		Verify(NULL != iRecvMessage);
 	}
@@ -753,13 +751,13 @@ private:
 			TClientEx(iocp, intfc, port), 
 			rioSessionManager(rioSessionManager) { }
 	private:
-		void TClientEx::Connected(BOOL status, std::shared_ptr<TSocket> socket) {
+		void TClientEx::Connected(BOOL status, ISocketPtr socket) {
 			Verify(TRUE == status);
 			rioSessionManager->NewClientSession(socket);
 		}
 	};
 private:
-	void NewClientSession(std::shared_ptr<TSocket> socket) {
+	void NewClientSession(ISocketPtr socket) {
 		//todo
 	}
 public:

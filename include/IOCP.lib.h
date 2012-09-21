@@ -7,10 +7,6 @@
 #include <hash_map>
 #include <rpc.h>
 
-// Need to link with Ws2_32.lib
-#pragma comment(lib, "Ws2_32")
-#pragma comment(lib, "rpcrt4")
-
 /////////////
 class TUUID {
 private:
@@ -85,9 +81,9 @@ public:
 		Verify(NULL != hIOCP);
 	}
 public:
-	void Attach(HANDLE hStream) {
+	void Attach(HANDLE hChild) {
 		HANDLE hCheck = ::CreateIoCompletionPort(
-			hStream, hIOCP, 0, 0);
+			hChild, hIOCP, 0, 0);
 		Verify(NULL != hCheck);
 	}
 private:
@@ -129,15 +125,15 @@ public:
 		//todo, GetQueuedCompletionStatusEx
 	}
 public:
-	~TIOCP() {
+	virtual ~TIOCP() {
 		BOOL check = ::CloseHandle(hIOCP);
 		Verify(TRUE == check);
 		hIOCP = NULL;
 	}
 };
 
-////////////////////
-class TIOCPEvented {
+//////////////////////////////////////////
+class TIOCPEvented : public IIOCPEvented {
 public:
 	TEvent completions_waiting;
 public:
@@ -149,7 +145,7 @@ class TWinsockExtensions {
 public:
 	TWinsockExtensions() : lpfnTransmitFile(NULL), lpfnAcceptEx(NULL), lpfnGetAcceptExSockAddrs(NULL),
 		lpfnTransmitPackets(NULL), lpfnConnectEx(NULL), lpfnDisconnectEx(NULL), 
-		socket(INVALID_SOCKET) {}
+		socket(INVALID_SOCKET) { }
 private:
 	LPFN_TRANSMITFILE lpfnTransmitFile;
 public:
@@ -303,7 +299,7 @@ public:
 	}
 private:
 	SOCKET socket;
-protected:
+public:
 	void Init(SOCKET socket) {
 		Verify(NULL != socket);
 		this->socket = socket;
@@ -343,23 +339,91 @@ protected:
 	}
 };
 
-///////////////////////////////////////////////////////////
-class TSocket : public TWinsockExtensions, public ISocket {
+////////////////////////////////
+class TSocket : public ISocket {
 private:
 	SOCKET hSocket;
 private:
-	TSocket() {}
+	TWinsockExtensions winsockExtensions;
+private:
+	TSocket() { }
 public:
 	TSocket(int type, int protocol, int flags) : hSocket(NULL) {
 		hSocket = ::WSASocket(AF_INET, type, protocol,
 			NULL, 0, flags);
 		Verify(INVALID_SOCKET != hSocket);
-		TWinsockExtensions::Init(hSocket);
+		winsockExtensions.Init(hSocket);
 	}
-public:
-	operator HANDLE() { return reinterpret_cast<HANDLE>(hSocket); }
-public:
-	operator SOCKET() { return hSocket; }
+private:
+	BOOL ISocket::TransmitFile(HANDLE hFile, DWORD nNumberOfBytesToWrite,
+		DWORD nNumberOfBytesPerSend, LPOVERLAPPED lpOverlapped,
+		LPTRANSMIT_FILE_BUFFERS lpTransmitBuffers, DWORD dwReserved) {
+			return winsockExtensions.TransmitFile(hFile, nNumberOfBytesToWrite,
+				nNumberOfBytesPerSend, lpOverlapped,
+				lpTransmitBuffers, dwReserved
+				);
+	}
+private:
+	BOOL ISocket::AcceptEx(SOCKET sAcceptSocket, PVOID lpOutputBuffer,
+		DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength,
+		LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped) {
+			return winsockExtensions.AcceptEx(
+				sAcceptSocket, lpOutputBuffer,
+				dwReceiveDataLength, dwLocalAddressLength, dwRemoteAddressLength,
+				lpdwBytesReceived, lpOverlapped
+				);
+	}
+private:
+	void ISocket::GetAcceptExSockAddrs(PVOID lpOutputBuffer,	DWORD dwReceiveDataLength,
+		DWORD dwLocalAddressLength,	DWORD dwRemoteAddressLength, struct sockaddr **LocalSockaddr,
+		LPINT LocalSockaddrLength, struct sockaddr **RemoteSockaddr, LPINT RemoteSockaddrLength) {
+		return winsockExtensions.GetAcceptExSockAddrs(
+			lpOutputBuffer,	dwReceiveDataLength,
+			dwLocalAddressLength,	dwRemoteAddressLength, LocalSockaddr,
+			LocalSockaddrLength, RemoteSockaddr, RemoteSockaddrLength
+			);
+	}
+private:
+	BOOL ISocket::TransmitPackets(LPTRANSMIT_PACKETS_ELEMENT lpPacketArray,                               
+		DWORD nElementCount, DWORD nSendSize, LPOVERLAPPED lpOverlapped,                  
+		DWORD dwFlags) {
+		return winsockExtensions.TransmitPackets(
+			lpPacketArray,                               
+			nElementCount, nSendSize, lpOverlapped,                  
+			dwFlags
+			);
+	}
+private:
+	BOOL ISocket::ConnectEx(const struct sockaddr FAR *name,
+		int namelen, PVOID lpSendBuffer, DWORD dwSendDataLength,
+		LPDWORD lpdwBytesSent, LPOVERLAPPED lpOverlapped) {
+		return winsockExtensions.ConnectEx(
+			name, namelen, lpSendBuffer, dwSendDataLength,
+			lpdwBytesSent, lpOverlapped
+			);
+	}
+private:
+	BOOL ISocket::DisconnectEx(LPOVERLAPPED lpOverlapped, DWORD  dwFlags, DWORD  dwReserved) {
+		return winsockExtensions.DisconnectEx(
+			lpOverlapped, dwFlags, dwReserved
+			);
+	}
+private:
+	BOOL ISocket::Send(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) {
+		return winsockExtensions.Send(
+			lpBuffers, dwBufferCount, lpOverlapped
+			);
+	}
+private:
+	BOOL ISocket::Recv(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) {
+		return winsockExtensions.Recv(
+			lpBuffers, dwBufferCount, lpOverlapped
+			);
+	}
+private:
+	ISocket::operator HANDLE() { return reinterpret_cast<HANDLE>(hSocket); }
+private:
+	ISocket::operator SOCKET() { return hSocket; }
 public:
 	virtual ~TSocket() {
 		int err = ::closesocket(hSocket);
@@ -418,12 +482,12 @@ private:
 		}
 	};
 private:
-	std::shared_ptr<TSocketTcp> acceptor;
+	ISocketPtr acceptor;
 public:
 	operator SOCKET() { return *acceptor; }
 public:
 	TListenerEx(std::string intfc, short port, int depth) {
-		acceptor = std::shared_ptr<TSocketTcp>(new TSocketTcp());
+		acceptor = ISocketPtr(new TSocketTcp());
 
 		SOCKADDR_IN addr;
 		memset(&addr, 0, sizeof(addr));
@@ -467,7 +531,7 @@ class TClientEx : public ICompletionResult {
 private:
 	SOCKADDR_IN addr;
 private:
-	std::shared_ptr<TSocketTcp> connector;
+	ISocketPtr connector;
 public:
 	operator SOCKET() { return *connector; }
 private:
@@ -486,7 +550,7 @@ public:
 		check = ::listen(*connector, SOMAXCONN);
 		Verify(SOCKET_ERROR != check);
 
-		connector = std::shared_ptr<TSocketTcp>(new TSocketTcp());
+		connector = ISocketPtr(new TSocketTcp());
 		connect_notify = std::shared_ptr<TOverlapped>(new TOverlapped(this));
 
 		check = connector->ConnectEx(reinterpret_cast<LPSOCKADDR>(&addr), sizeof(addr),
@@ -500,7 +564,7 @@ private:
 		Connected(status, connector);
 	}
 protected:
-	virtual void Connected(BOOL status, std::shared_ptr<TSocket> socket) = 0;
+	virtual void Connected(BOOL status, ISocketPtr socket) = 0;
 };
 
 ///////////////////////////////////
