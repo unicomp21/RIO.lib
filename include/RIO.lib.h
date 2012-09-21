@@ -727,6 +727,7 @@ private:
 	std::hash_map<std::string, TSessionListenerExPtr> listeners;
 private:
 	void NewServerSession(ISocketPtr socket) {
+		Init(*socket);
 		//todo
 	}
 public:
@@ -758,6 +759,7 @@ private:
 	};
 private:
 	void NewClientSession(ISocketPtr socket) {
+		Init(*socket);
 		//todo
 	}
 public:
