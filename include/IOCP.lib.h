@@ -529,8 +529,6 @@ public:
 /////////////////////////////////////////////
 class TClientEx : public ICompletionResult {
 private:
-	SOCKADDR_IN addr;
-private:
 	ISocketPtr connector;
 public:
 	operator SOCKET() { return *connector; }
@@ -539,21 +537,27 @@ private:
 public:
 	TClientEx() { ::__debugbreak(); }
 public:
-	TClientEx(TIOCP &iocp, std::string intfc, short port)
+	TClientEx(TIOCP &iocp, std::string intfc, std::string remote, short port)
 	{
-		memset(&addr, 0, sizeof(addr));
-		addr.sin_addr.S_un.S_addr = ::inet_addr(intfc.c_str());
-		addr.sin_family = AF_INET;
-		addr.sin_port = ::htons(port);
-		int check = ::bind(*connector, reinterpret_cast<LPSOCKADDR>(&addr), sizeof(addr));
-		Verify(SOCKET_ERROR != check);
-		check = ::listen(*connector, SOMAXCONN);
+		connector = ISocketPtr(new TSocketTcp());
+		
+		SOCKADDR_IN intfc_addr;
+		memset(&intfc_addr, 0, sizeof(intfc_addr));
+		intfc_addr.sin_addr.S_un.S_addr = ::inet_addr(intfc.c_str());
+		intfc_addr.sin_family = AF_INET;
+		intfc_addr.sin_port = ::htons(0);
+		int check = ::bind(*connector, reinterpret_cast<LPSOCKADDR>(&intfc_addr), sizeof(intfc_addr));
 		Verify(SOCKET_ERROR != check);
 
-		connector = ISocketPtr(new TSocketTcp());
+		SOCKADDR_IN remote_addr;
+		memset(&remote_addr, 0, sizeof(remote_addr));
+		remote_addr.sin_addr.S_un.S_addr = ::inet_addr(remote.c_str());
+		remote_addr.sin_family = AF_INET;
+		remote_addr.sin_port = ::htons(port);
+
 		connect_notify = std::shared_ptr<TOverlapped>(new TOverlapped(this));
 
-		check = connector->ConnectEx(reinterpret_cast<LPSOCKADDR>(&addr), sizeof(addr),
+		check = connector->ConnectEx(reinterpret_cast<LPSOCKADDR>(&remote_addr), sizeof(remote_addr),
 			NULL, 0, NULL, *connect_notify);
 		if(FALSE == check)
 			Verify(ERROR_IO_PENDING == ::WSAGetLastError());
