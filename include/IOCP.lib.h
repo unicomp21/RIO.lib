@@ -268,7 +268,7 @@ private:
 private:
 	TWinsockExtensions winsockExtensions;
 private:
-	TSocket() { }
+	TSocket() { NotImplemented(); }
 public:
 	TSocket(int type, int protocol, int flags) : hSocket(NULL) {
 		hSocket = ::WSASocket(AF_INET, type, protocol,
@@ -364,7 +364,7 @@ public:
 /////////////////////////////////////
 class TOverlappedRecv : TOverlapped {
 private:
-	TOverlappedRecv() { }
+	TOverlappedRecv() : TOverlapped(NULL) { NotImplemented(); }
 public:
 	TOverlappedRecv(ICompletionResult *iCompletionResult, size_t buffer_size) : 
 		TOverlapped(iCompletionResult), buffer(buffer_size) { }
@@ -375,15 +375,16 @@ public:
 /////////////////////////////////////
 class TOverlappedSend : TOverlapped {
 private:
-	TOverlappedSend() { }
+	TOverlappedSend() : TOverlapped(NULL) { NotImplemented(); }
 public:
-	TOverlappedSend(ICompletionResult *iCompletionResult) { }
+	TOverlappedSend(ICompletionResult *iCompletionResult) :
+		TOverlapped(iCompletionResult) { }
 }; // TOverlappedSend
 
 ///////////////////////////////////////////////
 class TListenerEx : public ICompletionResult {
-public:
-	TListenerEx() { ::__debugbreak(); }
+private:
+	TListenerEx() { NotImplemented(); }
 private:
 	class TOverlappedListener : public TOverlapped {
 	public:
@@ -395,7 +396,7 @@ private:
 	public:
 		ISocketPtr acceptee;
 	private:
-		TOverlappedListener() : byte_count(0) { }
+		TOverlappedListener() : TOverlapped(NULL), byte_count(0) { }
 	public:
 		TOverlappedListener(ICompletionResult *ICompletionResult) : 
 			byte_count(0), addresses_buffer(2 * address_reserve),
@@ -457,8 +458,8 @@ public:
 	operator SOCKET() { return *connector; }
 private:
 	std::shared_ptr<TOverlapped> connect_notify;
-public:
-	TClientEx() { ::__debugbreak(); }
+private:
+	TClientEx() { NotImplemented(); }
 public:
 	TClientEx(TIOCP &iocp, std::string intfc, std::string remote, short port)
 	{
@@ -514,7 +515,7 @@ public:
 private:
 	ISessionManager *iSessionManager;
 private:
-	TSession() { }
+	TSession() { NotImplemented(); }
 public:
 	TSession(ISessionManager *iSessionManager) :
 		iSessionManager(iSessionManager) { }
@@ -530,6 +531,9 @@ private:
 	__int64 next_seqno;
 private:
 	std::vector<char> parent_buffer;
+private:
+	TBufferManager() : block_count(0), block_size(0), next_seqno(0),
+		parent_buffer(0) { NotImplemented(); }
 public:
 	TBufferManager(int block_count, int block_size = 1024) :
 		block_count(block_count), block_size(block_size),

@@ -21,6 +21,12 @@ inline void Verify(bool check) {
 		::DebugBreak();
 }
 
+//////////////////////////////
+inline void NotImplemented() {
+	::__debugbreak();
+	throw std::exception("not implemented");
+}
+
 //////////////
 class TEvent {
 private:
@@ -142,8 +148,8 @@ class TOverlapped : public OVERLAPPED {
 	friend class TIOCP;
 public:
 	void Reset() { LPOVERLAPPED clear = this; memset(clear, 0, sizeof(OVERLAPPED)); }
-public:
-	TOverlapped() : iCompletion(NULL) { __debugbreak(); /* not implemented */ }
+private:
+	TOverlapped() : iCompletion(NULL) { NotImplemented(); }
 private:
 	ICompletionResult *iCompletion;
 public:
@@ -200,12 +206,12 @@ public:
 	}
 public:
 	void Stop() {
-		__debugbreak();
+		NotImplemented();
 		//todo, running = false
 	}
 public:
 	void FlushQueueEx() {
-		__debugbreak();
+		NotImplemented();
 		//todo, GetQueuedCompletionStatusEx
 	}
 public:

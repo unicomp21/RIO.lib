@@ -265,7 +265,7 @@ public:
 class TRioRingBufferManager {
 	friend class TRioSocketQueue;
 private:
-	TRioRingBufferManager() { }
+	TRioRingBufferManager() { NotImplemented(); }
 private:
 	TRioExtensions rio_extensions;
 private:
@@ -373,7 +373,7 @@ public:
 		~TBuffer() { rioBufferManager->free_blocks.insert(block_id); }
 	};
 private:
-	TRioBufferManager() { }
+	TRioBufferManager() { NotImplemented(); }
 private:
 	TRioExtensions rio_extensions;
 private:
@@ -419,7 +419,7 @@ public:
 class TRioCompletionQueue {
 	friend class TRioSocketQueue;
 private:
-	TRioCompletionQueue() { }
+	TRioCompletionQueue() { NotImplemented(); }
 private:
 	TRioExtensions rio_extensions;
 private:
@@ -480,6 +480,8 @@ public:
 	}
 public:
 	TEvent completions_waiting;
+private:
+	TRioCompletionQueueEvented() { NotImplemented(); }
 public:
 	TRioCompletionQueueEvented(SOCKET socket, DWORD queue_size) {
 		completion_queue = std::shared_ptr<TRioCompletionQueue>(
@@ -495,6 +497,8 @@ private:
 	TRioExtensions rio_extensions;
 private:
 	RIO_RQ rq;
+private:
+	TRioSocketQueue() { NotImplemented(); }
 public:
 	TRioSocketQueue(int type, int protocol, unsigned long depth, RIO_CQ completion_queue) : rq(NULL) {
 		socket = ISocketPtr(new TSocket(type, protocol, WSA_FLAG_REGISTERED_IO));
@@ -618,6 +622,8 @@ public:
 
 ///////////////////////////////////////////////////
 class TRioSocketQueueTcp : public TRioSocketQueue {
+private:
+	TRioSocketQueueTcp() : TRioSocketQueue(0, 0, 0, 0) { NotImplemented(); }
 public:
 	TRioSocketQueueTcp(unsigned long depth, RIO_CQ cq,
 		int type = SOCK_STREAM, int protocol = IPPROTO_TCP) : 
@@ -627,6 +633,8 @@ public:
 
 ///////////////////////////////////////////////////
 class TRioSocketQueueUdp : public TRioSocketQueue {
+private:
+	TRioSocketQueueUdp() : TRioSocketQueue(0, 0, 0, 0) { NotImplemented(); }
 public:
 	TRioSocketQueueUdp(unsigned long depth, RIO_CQ cq,
 		int type = SOCK_DGRAM, int protocol = IPPROTO_UDP) :
@@ -642,6 +650,8 @@ private:
 	enum { socket_queue_depth = 16 };
 private:
 	TRioSocketQueueTcp socket_queue;
+private:
+	TRioSession() : socket_queue(0, NULL) { NotImplemented(); }
 public:
 	TRioSession(std::shared_ptr<TRioCompletionQueue> completion_queue) : 
 		socket_queue(socket_queue_depth, *completion_queue) { }
@@ -683,7 +693,7 @@ class TRioSessionManager {
 private:
 	std::hash_map<std::string /*uuid*/, TRioSessionPtr> sessions;
 private:
-	TRioSessionManager() { }
+	TRioSessionManager() { NotImplemented(); }
 private:
 	IRecvMessage *iRecvMessage;
 private:
@@ -709,14 +719,15 @@ private:
 private:
 	friend class TSessionListenerEx;
 	class TRioSessionListenerEx : public TListenerEx {
-	public:
-		TRioSessionListenerEx() { ::__debugbreak(); }
+	private:
+		TRioSessionListenerEx() : TListenerEx(TIOCP(), "", NULL, NULL) { NotImplemented(); }
 	private:
 		TRioSessionManager *rioSessionManager;
 	public:
 		TRioSessionListenerEx(TRioSessionManager *rioSessionManager, 
 			std::string intfc, short port, int depth) :
-			TListenerEx(rioSessionManager->iocp->completion_port(), intfc, port, depth), rioSessionManager(rioSessionManager) { }
+			TListenerEx(rioSessionManager->iocp->completion_port(), intfc, port, depth),
+				rioSessionManager(rioSessionManager) { }
 	private:
 		void TListenerEx::Accepted(BOOL status, ISocketPtr socket) {
 			Verify(TRUE == status);
@@ -741,8 +752,8 @@ public:
 	}
 private:
 	class TRioSessionClientEx : public TClientEx {
-	public:
-		TRioSessionClientEx() { ::__debugbreak(); }
+	private:
+		TRioSessionClientEx() : TClientEx(TIOCP(), "", NULL, NULL) { NotImplemented(); }
 	private:
 		TRioSessionManager *rioSessionManager;
 	public:
