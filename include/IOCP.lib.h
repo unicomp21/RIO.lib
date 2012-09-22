@@ -486,8 +486,9 @@ private:
 public:
 	operator SOCKET() { return *acceptor; }
 public:
-	TListenerEx(std::string intfc, short port, int depth) {
+	TListenerEx(TIOCP &iocp, std::string intfc, short port, int depth) {
 		acceptor = ISocketPtr(new TSocketTcp());
+		iocp.Attach(*acceptor);
 
 		SOCKADDR_IN addr;
 		memset(&addr, 0, sizeof(addr));
@@ -540,6 +541,7 @@ public:
 	TClientEx(TIOCP &iocp, std::string intfc, std::string remote, short port)
 	{
 		connector = ISocketPtr(new TSocketTcp());
+		iocp.Attach(*connector);
 		
 		SOCKADDR_IN intfc_addr;
 		memset(&intfc_addr, 0, sizeof(intfc_addr));
