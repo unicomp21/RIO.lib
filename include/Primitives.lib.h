@@ -79,9 +79,9 @@ public:
 	void Append(std::vector<char> &buffer, __int64 val) {
 		out_writer.str("");
 		out_writer << val;
-		Verify(out_writer.str().length() >= 9);
+		Verify(out_writer.str().length() <= 9);
 		out_buffer.clear();
-		out_buffer += static_cast<char>(val);
+		out_buffer += static_cast<char>(out_writer.str().length() + '0');
 		out_buffer += out_writer.str();
 		buffer.insert(buffer.end(), out_buffer.begin(), out_buffer.end());
 	}
