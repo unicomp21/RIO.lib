@@ -120,7 +120,7 @@ public:
 		}
 	}
 public:
-	void Dump(std::ostream out) {
+	void Dump(std::ostream &out) {
 		for(iterator iter = begin(); iter != end(); iter++) {
 			out << iter->first << ": " << iter->second << std::endl;
 		}
