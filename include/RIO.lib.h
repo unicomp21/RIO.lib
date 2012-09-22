@@ -8,13 +8,13 @@
 class TRioSocketTcp : public TSocket {
 	TRioSocketTcp() : TSocket(SOCK_STREAM, IPPROTO_TCP, WSA_FLAG_REGISTERED_IO) {
 	}
-};
+}; // TRioSocketTcp
 
 //////////////////////////////////////
 class TRioSocketUdp : public TSocket {
 	TRioSocketUdp() : TSocket(SOCK_DGRAM, IPPROTO_UDP, WSA_FLAG_REGISTERED_IO) {
 	}
-};
+}; // TRioSocketUdp
 
 //////////////////////
 class TRioExtensions {
@@ -259,7 +259,7 @@ public:
 			sizeof(GUID_WSAID_MULTIPLE_RIO), &function_table, sizeof (function_table), &dwBytes, NULL, NULL);
 		Verify(SOCKET_ERROR != check);
 	}
-};
+}; // TRioExtensions
 
 /////////////////////////////
 class TRioRingBufferManager {
@@ -350,7 +350,7 @@ public:
 	~TRioRingBufferManager() {
 		rio_extensions.RIODeregisterBuffer(bufferid);
 	}
-};
+}; // TRioRingBufferManager
 
 /////////////////////////
 class TRioBufferManager {
@@ -413,7 +413,7 @@ public:
 	~TRioBufferManager() {
 		rio_extensions.RIODeregisterBuffer(bufferid);
 	}
-};
+}; // TRioBufferManager
 
 ///////////////////////////
 class TRioCompletionQueue {
@@ -468,7 +468,7 @@ public:
 		rio_extensions.RIOCloseCompletionQueue(cq);
 		cq = RIO_INVALID_CQ;
 	}
-};
+}; // TRioCompletionQueue
 
 //////////////////////////////////
 class TRioCompletionQueueEvented {
@@ -485,7 +485,7 @@ public:
 		completion_queue = std::shared_ptr<TRioCompletionQueue>(
 			new TRioCompletionQueue(socket, queue_size, completions_waiting));
 	}
-};
+}; // TRioCompletionQueueEvented
 
 ///////////////////////
 class TRioSocketQueue {
@@ -614,7 +614,7 @@ public:
 	~TRioSocketQueue() {
 		// OS cleanup via closesocket
 	}
-};
+}; // TRioSocketQueue
 
 ///////////////////////////////////////////////////
 class TRioSocketQueueTcp : public TRioSocketQueue {
@@ -623,7 +623,7 @@ public:
 		int type = SOCK_STREAM, int protocol = IPPROTO_TCP) : 
 		TRioSocketQueue(type, protocol, depth, cq) {
 	}
-};
+}; // TRioSocketQueueTcp
 
 ///////////////////////////////////////////////////
 class TRioSocketQueueUdp : public TRioSocketQueue {
@@ -632,7 +632,7 @@ public:
 		int type = SOCK_DGRAM, int protocol = IPPROTO_UDP) :
 		TRioSocketQueue(type, protocol, depth, cq) {
 	}
-};
+}; // TRioSocketQueueUdp
 
 ///////////////////
 class TRioSession {
@@ -649,14 +649,14 @@ public:
 	void SendMessage(UUID session_id, TMessage &message) {
 		//todo
 	}
-};
+}; // TRioSession
 typedef std::shared_ptr<TRioSession> TRioSessionPtr;
 
 ////////////////////
 class IRecvMessage {
 public:
 	virtual void RecvMessage(TMessage &message) = 0;
-};
+}; // IRecvMessage
 
 //////////////////////
 class ISessionNotify {
@@ -664,7 +664,7 @@ public:
 	virtual void SessionOpened(std::string session_id) = 0;
 public:
 	virtual void SessionClosed(std::string session_id) = 0;
-};
+}; // ISessionNotify
 
 ///////////////////////////////////////////////
 class ICloseSessionCallback : ICompletionResult
@@ -672,11 +672,11 @@ class ICloseSessionCallback : ICompletionResult
 
 //////////////////////////////////////////////
 class ISendMessageCallback : ICompletionResult
-{ };
+{ }; // ICloseSessionCallback
 
 //////////////////////////////////////////
 class IConnectCallback : ICompletionResult
-{ };
+{ }; // IConnectCallback
 
 //////////////////////////
 class TRioSessionManager {
@@ -786,4 +786,5 @@ public:
 		Verify(NULL != iRecvMessage);
 		this->iRecvMessage = iRecvMessage;
 	}
-};
+}; // TRioSessionManager
+

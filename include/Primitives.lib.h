@@ -38,7 +38,7 @@ public:
 		Verify(TRUE == check);
 		hEvent = NULL;
 	}
-};
+}; // TEvent
 
 ///////////////
 class TNumber {
@@ -79,7 +79,7 @@ public:
 		out_buffer += out_writer.str();
 		buffer.insert(buffer.end(), out_buffer.begin(), out_buffer.end());
 	}
-};
+}; // TNumber
 
 ////////////////////////////////////////////////////////////
 class TMessage : public std::map<std::string, std::string> {
@@ -126,7 +126,7 @@ public:
 		}
 		out << std::endl;
 	}
-};
+}; // TMessage
 
 /////////////////////////
 class TOverlapped;
@@ -135,7 +135,7 @@ class TOverlapped;
 class ICompletionResult {
 public:
 	virtual void Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped) = 0;
-};
+}; // ICompletionResult
 
 ///////////////////////////////////////
 class TOverlapped : public OVERLAPPED {
@@ -152,7 +152,7 @@ public:
 	TOverlapped(ICompletionResult *iCompletion) : iCompletion(iCompletion) {
 		Reset();
 	}
-};
+}; // TOverlapped
 
 /////////////
 class TIOCP {
@@ -214,7 +214,7 @@ public:
 		Verify(TRUE == check);
 		hIOCP = NULL;
 	}
-};
+}; // TIOCP
 
 ///////////////
 class ISocket {
@@ -250,7 +250,7 @@ public:
 	virtual BOOL Recv(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) = 0;
 public:
 	virtual ~ISocket() { }
-};
+}; // ISocket
 
 typedef std::shared_ptr<ISocket> ISocketPtr;
 
@@ -260,6 +260,6 @@ public:
 	virtual TEvent &completions_waiting() = 0;
 public:
 	virtual TIOCP &completion_port() = 0;
-};
+}; // IIOCPEvented
 
 typedef std::shared_ptr<IIOCPEvented> IIOCPEventedPtr;

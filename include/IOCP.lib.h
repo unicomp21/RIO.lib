@@ -30,7 +30,7 @@ public:
 		Verify(RPC_S_OK == status);
 		return out;
 	}
-};
+}; // TUUID
 
 ///////////////////
 class TWSAStartup {
@@ -48,7 +48,7 @@ public:
 		int err = ::WSACleanup();
 		Verify(0 == err);
 	}
-};
+}; // TWSAStartup
 
 //////////////////////////////////////////
 class TIOCPEvented : public IIOCPEvented {
@@ -60,7 +60,7 @@ private:
 	TIOCP _completion_port;
 private:
 	TIOCP &completion_port() { return _completion_port; }
-};
+}; // TIOCPEvented
 
 //////////////////////////
 class TWinsockExtensions {
@@ -259,7 +259,7 @@ public:
 			sizeof(GUID_WSAID_DISCONNECTEX), &lpfnDisconnectEx, sizeof (lpfnDisconnectEx), &dwBytes, NULL, NULL);
 		Verify(SOCKET_ERROR != check);
 	}
-};
+}; // TWinsockExtensions
 
 ////////////////////////////////
 class TSocket : public ISocket {
@@ -352,14 +352,14 @@ public:
 		Verify(0 == err);
 		hSocket = NULL;
 	}
-};
+}; // TSocket
 
 ///////////////////////////////////
 class TSocketTcp : public TSocket {
 public:
 	TSocketTcp() : TSocket(SOCK_STREAM, IPPROTO_TCP, WSA_FLAG_OVERLAPPED) {
 	}
-};
+}; // TSocketTcp
 
 /////////////////////////////////////
 class TOverlappedRecv : TOverlapped {
@@ -370,7 +370,7 @@ public:
 		TOverlapped(iCompletionResult), buffer(buffer_size) { }
 public:
 	std::vector<char> buffer;
-};
+}; // TOverlappedRecv
 
 /////////////////////////////////////
 class TOverlappedSend : TOverlapped {
@@ -378,7 +378,7 @@ private:
 	TOverlappedSend() { }
 public:
 	TOverlappedSend(ICompletionResult *iCompletionResult) { }
-};
+}; // TOverlappedSend
 
 ///////////////////////////////////////////////
 class TListenerEx : public ICompletionResult {
@@ -447,7 +447,7 @@ private:
 	}
 public:
 	virtual void Accepted(BOOL status, ISocketPtr socket) = 0;
-};
+}; // TListenerEx
 
 /////////////////////////////////////////////
 class TClientEx : public ICompletionResult {
@@ -493,19 +493,19 @@ private:
 	}
 protected:
 	virtual void Connected(BOOL status, ISocketPtr socket) = 0;
-};
+}; // TClientEx
 
 ///////////////////////////////////
 class TSocketUdp : public TSocket {
 public:
 	TSocketUdp() : TSocket(SOCK_DGRAM, IPPROTO_UDP, WSA_FLAG_OVERLAPPED) {
 	}
-};
+}; // TSocketUdp
 
 ///////////////////////
 class ISessionManager {
 	//todo
-};
+}; // ISessionManager
 
 ////////////////
 class TSession {
@@ -518,7 +518,7 @@ private:
 public:
 	TSession(ISessionManager *iSessionManager) :
 		iSessionManager(iSessionManager) { }
-};
+}; // TSession
 
 //////////////////////
 class TBufferManager {
@@ -580,7 +580,7 @@ public:
 		}
 		return NULL;
 	}
-};
+}; // TBufferManager
 
 ///////////////////////
 class TSessionManager {
@@ -590,4 +590,4 @@ private:
 	TBufferManager bufferManager;
 public:
 	//todo
-};
+}; // TSessionManager
