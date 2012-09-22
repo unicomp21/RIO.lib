@@ -700,7 +700,7 @@ public:
 		Verify(NULL != iRecvMessage);
 	}
 private:
-	void Init(SOCKET socket) {
+	void InitCompletionQueue(SOCKET socket) {
 		if(!rio_cq) {
 			rio_cq = std::shared_ptr<TRioCompletionQueueEvented>(
 				new TRioCompletionQueueEvented(socket, max_completion_queue));
@@ -727,7 +727,6 @@ private:
 	std::hash_map<std::string, TSessionListenerExPtr> listeners;
 private:
 	void NewServerSession(ISocketPtr socket) {
-		Init(*socket);
 		//todo
 	}
 public:
@@ -738,7 +737,7 @@ public:
 		TSessionListenerExPtr listener = TSessionListenerExPtr(
 			new TSessionListenerEx(this, intfc, port, accept_depth));
 		 listeners[key.str()] = listener;
-		 Init(*listener);
+		 InitCompletionQueue(*listener);
 	}
 private:
 	class TSessionClientEx : public TClientEx {
@@ -748,8 +747,8 @@ private:
 		TRioSessionManager *rioSessionManager;
 	public:
 		TSessionClientEx(TRioSessionManager *rioSessionManager, TIOCP &iocp, 
-			std::string intfc, short port) : 
-			TClientEx(iocp, intfc, port), 
+			std::string intfc, std::string remote,  short port) : 
+			TClientEx(iocp, intfc, remote, port), 
 			rioSessionManager(rioSessionManager) { }
 	private:
 		void TClientEx::Connected(BOOL status, ISocketPtr socket) {
@@ -757,9 +756,9 @@ private:
 			rioSessionManager->NewClientSession(socket);
 		}
 	};
+	typedef std::shared_ptr<TSessionClientEx> TSessionClientExPtr;
 private:
 	void NewClientSession(ISocketPtr socket) {
-		Init(*socket);
 		//todo
 	}
 public:
@@ -769,7 +768,9 @@ public:
 		std::stringstream key;
 		key << remote_address << ":" << remote_port;
 		Verify(listeners.end() == listeners.find(key.str()));
-		//todo
+		TSessionClientExPtr client = TSessionClientExPtr(
+			new TSessionClientEx(this, iocp, intfc, remote_address, remote_port));
+		InitCompletionQueue(*client);
 	}
 public:
 	void SendMesage(std::string session_id, TMessage &message,
