@@ -50,94 +50,16 @@ public:
 	}
 };
 
-////////////
-class TIOCP;
-
-///////////////////////////////////////
-class TOverlapped : public OVERLAPPED {
-	friend class TIOCP;
-public:
-	void Reset() { LPOVERLAPPED clear = this; memset(clear, 0, sizeof(OVERLAPPED)); }
-public:
-	TOverlapped() : iCompletion(NULL) { __debugbreak(); /* not implemented */ }
-private:
-	ICompletionResult *iCompletion;
-public:
-	operator LPOVERLAPPED() { return this; }
-public:
-	TOverlapped(ICompletionResult *iCompletion) : iCompletion(iCompletion) {
-		Reset();
-	}
-};
-
-/////////////
-class TIOCP {
-private:
-	HANDLE hIOCP;
-public:
-	TIOCP() : running(true) {
-		hIOCP = ::CreateIoCompletionPort(
-			INVALID_HANDLE_VALUE, NULL, 0, 0);
-		Verify(NULL != hIOCP);
-	}
-public:
-	void Attach(HANDLE hChild) {
-		HANDLE hCheck = ::CreateIoCompletionPort(
-			hChild, hIOCP, 0, 0);
-		Verify(NULL != hCheck);
-	}
-private:
-	volatile bool running;
-public:
-	void FlushQueue() {
-		LPOVERLAPPED lpOverlapped = NULL;
-		ULONG_PTR completion_key = 0;
-		DWORD byte_count = 0;
-		BOOL status = ::GetQueuedCompletionStatus(
-			hIOCP, &byte_count, &completion_key, &lpOverlapped, INFINITE);
-		TOverlapped *pOverlapped = reinterpret_cast<TOverlapped*>(lpOverlapped);
-		if(TRUE == status) {
-			Verify(NULL != pOverlapped->iCompletion);
-			pOverlapped->iCompletion->Completed(status, byte_count, pOverlapped);
-		} else {
-			if(NULL != lpOverlapped) {
-				Verify(NULL != pOverlapped->iCompletion);
-				pOverlapped->iCompletion->Completed(status, byte_count, pOverlapped);
-			} else {
-				//timeout
-			}
-		}
-	}
-public:
-	void Run() {
-		while(running) {
-			FlushQueue();
-		}
-	}
-public:
-	void Stop() {
-		__debugbreak();
-		//todo, running = false
-	}
-public:
-	void FlushQueueEx() {
-		__debugbreak();
-		//todo, GetQueuedCompletionStatusEx
-	}
-public:
-	virtual ~TIOCP() {
-		BOOL check = ::CloseHandle(hIOCP);
-		Verify(TRUE == check);
-		hIOCP = NULL;
-	}
-};
-
 //////////////////////////////////////////
 class TIOCPEvented : public IIOCPEvented {
-public:
-	TEvent completions_waiting;
-public:
-	TIOCP completion_port;
+private:
+	TEvent _completions_waiting;
+private:
+	TEvent &IIOCPEvented::completions_waiting() { return _completions_waiting; }
+private:
+	TIOCP _completion_port;
+private:
+	TIOCP &completion_port() { return _completion_port; }
 };
 
 //////////////////////////
@@ -486,8 +408,9 @@ private:
 public:
 	operator SOCKET() { return *acceptor; }
 public:
-	TListenerEx(std::string intfc, short port, int depth) {
+	TListenerEx(TIOCP &iocp, std::string intfc, short port, int depth) {
 		acceptor = ISocketPtr(new TSocketTcp());
+		iocp.Attach(*acceptor);
 
 		SOCKADDR_IN addr;
 		memset(&addr, 0, sizeof(addr));
@@ -529,8 +452,6 @@ public:
 /////////////////////////////////////////////
 class TClientEx : public ICompletionResult {
 private:
-	SOCKADDR_IN addr;
-private:
 	ISocketPtr connector;
 public:
 	operator SOCKET() { return *connector; }
@@ -539,21 +460,28 @@ private:
 public:
 	TClientEx() { ::__debugbreak(); }
 public:
-	TClientEx(TIOCP &iocp, std::string intfc, short port)
+	TClientEx(TIOCP &iocp, std::string intfc, std::string remote, short port)
 	{
-		memset(&addr, 0, sizeof(addr));
-		addr.sin_addr.S_un.S_addr = ::inet_addr(intfc.c_str());
-		addr.sin_family = AF_INET;
-		addr.sin_port = ::htons(port);
-		int check = ::bind(*connector, reinterpret_cast<LPSOCKADDR>(&addr), sizeof(addr));
-		Verify(SOCKET_ERROR != check);
-		check = ::listen(*connector, SOMAXCONN);
+		connector = ISocketPtr(new TSocketTcp());
+		iocp.Attach(*connector);
+		
+		SOCKADDR_IN intfc_addr;
+		memset(&intfc_addr, 0, sizeof(intfc_addr));
+		intfc_addr.sin_addr.S_un.S_addr = ::inet_addr(intfc.c_str());
+		intfc_addr.sin_family = AF_INET;
+		intfc_addr.sin_port = ::htons(0);
+		int check = ::bind(*connector, reinterpret_cast<LPSOCKADDR>(&intfc_addr), sizeof(intfc_addr));
 		Verify(SOCKET_ERROR != check);
 
-		connector = ISocketPtr(new TSocketTcp());
+		SOCKADDR_IN remote_addr;
+		memset(&remote_addr, 0, sizeof(remote_addr));
+		remote_addr.sin_addr.S_un.S_addr = ::inet_addr(remote.c_str());
+		remote_addr.sin_family = AF_INET;
+		remote_addr.sin_port = ::htons(port);
+
 		connect_notify = std::shared_ptr<TOverlapped>(new TOverlapped(this));
 
-		check = connector->ConnectEx(reinterpret_cast<LPSOCKADDR>(&addr), sizeof(addr),
+		check = connector->ConnectEx(reinterpret_cast<LPSOCKADDR>(&remote_addr), sizeof(remote_addr),
 			NULL, 0, NULL, *connect_notify);
 		if(FALSE == check)
 			Verify(ERROR_IO_PENDING == ::WSAGetLastError());

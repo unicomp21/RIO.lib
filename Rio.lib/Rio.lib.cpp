@@ -11,6 +11,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	TUUID test;
 	std::cout << (std::string)test << std::endl;
 
+	TMessage msg;
+	msg["arg1"] = "val1";
+	msg["arg2"] = "val2";
+	msg.Dump(std::cout);
+
 	return 0;
 }
-
