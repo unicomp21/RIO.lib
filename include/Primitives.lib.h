@@ -51,11 +51,10 @@ class TNumber {
 private:
 	enum { reserve_capacity = 128 };
 public:
-	TNumber() : out_writer(reserve_capacity) {
+	TNumber() {
+		out_writer_cache.reserve(16);
 		out_buffer.reserve(reserve_capacity);
 	}
-private:
-	std::stringstream in_reader;
 private:
 	std::string in_buffer;
 public:
@@ -65,21 +64,26 @@ public:
 		size_t len = buffer[start_offset] - '0';
 		start_offset++;
 		Verify((start_offset + len) < buffer.size());
-		in_buffer.insert(0, buffer.at(start_offset), buffer.at(start_offset + len));
+		size_t end_offset = start_offset + len;
+		in_buffer.insert(in_buffer.begin(), 
+			buffer.begin() + start_offset, buffer.begin() + end_offset);
 		int val = 0;
-		in_reader.str(in_buffer);
+		std::stringstream in_reader(in_buffer);
 		in_reader >> val;
-		return val;
+		*num = val;
+		return end_offset;
 	}
 private:
-	std::stringstream out_writer;
-private:
 	std::string out_buffer;
+private:
+	std::string out_writer_cache;
 public:
 	void Append(std::vector<char> &buffer, __int64 val) {
-		out_writer.str("");
+		out_writer_cache.clear();
+		std::stringstream out_writer(out_writer_cache);
 		out_writer << val;
 		Verify(out_writer.str().length() <= 9);
+		Verify(out_writer.str().length() > 0);
 		out_buffer.clear();
 		out_buffer += static_cast<char>(out_writer.str().length() + '0');
 		out_buffer += out_writer.str();
@@ -87,7 +91,7 @@ public:
 	}
 }; // TNumber
 
-////////////////////////////////////////////////////////////
+////////////// LiPS - Length Prefixed Strings //////////////
 class TMessage : public std::map<std::string, std::string> {
 private:
 	TNumber number;
@@ -103,11 +107,13 @@ public:
 		for(__int64 i = 0; i < count; i++) {
 			len_key = 0;
 			offset = number.Read(buffer, offset, &len_key);
-			key.clear(); key.insert(key.begin(), buffer.at(offset), buffer.at(offset + static_cast<size_t>(len_key)));
+			key.clear(); key.insert(key.begin(), 
+				buffer.begin() + offset, buffer.begin() + (offset + static_cast<size_t>(len_key)));
 			offset += static_cast<size_t>(len_key);
 			len_val = 0;
 			offset = number.Read(buffer, offset, &len_val);
-			val.clear(); val.insert(val.begin(), buffer.at(offset), buffer.at(offset + static_cast<size_t>(len_val)));
+			val.clear(); val.insert(val.begin(), 
+				buffer.begin() + offset, buffer.begin() + (offset + static_cast<size_t>(len_val)));
 			offset += static_cast<size_t>(len_val);
 			(*this)[key] = val;
 		}
