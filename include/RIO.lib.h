@@ -724,7 +724,7 @@ namespace MurmurBus { namespace RIO {
 		friend class TSessionListenerEx;
 		class TRioSessionListenerEx : public TAcceptEx {
 		private:
-			TRioSessionListenerEx() : TAcceptEx(nullptr, "", NULL, NULL) { NotImplemented(); }
+			TRioSessionListenerEx() : TAcceptEx(IIOCPEventedPtr(), "", NULL, NULL) { NotImplemented(); }
 		private:
 			TRioSessionManager *rioSessionManager;
 		public:
@@ -757,7 +757,7 @@ namespace MurmurBus { namespace RIO {
 	private:
 		class TRioSessionClientEx : public TClientEx {
 		private:
-			TRioSessionClientEx() : TClientEx(nullptr, "", NULL, NULL) { NotImplemented(); }
+			TRioSessionClientEx() : TClientEx(IIOCPEventedPtr(), "", NULL, NULL) { NotImplemented(); }
 		private:
 			TRioSessionManager *rioSessionManager;
 		public:

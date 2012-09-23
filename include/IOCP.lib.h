@@ -572,8 +572,14 @@ namespace MurmurBus { namespace IOCP {
 		TBufferManager bufferManager;
 	public:
 		enum { max_block_count = 65536 };
+	private:
+		IIOCPEventedPtr iocp;
 	public:
-		TSessionManager() : bufferManager(max_block_count) { }
+		TSessionManager(IIOCPEventedPtr iocp) : 
+			iocp(iocp), bufferManager(max_block_count)
+		{
+			Verify(iocp);
+		}
 	public:
 		void NewSession(ISocketPtr socket) {
 			//todo
@@ -584,7 +590,7 @@ namespace MurmurBus { namespace IOCP {
 	class TListener {
 		friend class TListenAccept;
 	private:
-		TListener() : acceptor(nullptr, "", 0, 0, NULL) { }
+		TListener() : acceptor(IIOCPEventedPtr(), "", 0, 0, NULL), sessionManager(IIOCPEventedPtr()) { NotImplemented(); }
 	private:
 		std::string service;
 	private:
@@ -600,7 +606,7 @@ namespace MurmurBus { namespace IOCP {
 			TListener *listener;
 		private:
 			TListenAccept() :
-				TAcceptEx(nullptr, "", 0, 0) { }
+				TAcceptEx(IIOCPEventedPtr(), "", 0, 0) { NotImplemented(); }
 		public:
 			TListenAccept(IIOCPEventedPtr iocp, std::string intfc, short port, int depth, TListener *listener) :
 				TAcceptEx(iocp, intfc, port, depth), listener(listener)
@@ -615,7 +621,7 @@ namespace MurmurBus { namespace IOCP {
 	public:
 		TListener(IIOCPEventedPtr iocp, std::string intfc, 
 			short port, int depth, std::string service) : 
-			iocp(iocp), service (service), acceptor(iocp, intfc, port, depth, this)
+			iocp(iocp), service (service), acceptor(iocp, intfc, port, depth, this), sessionManager(iocp)
 		{
 			listener = ISocketPtr(new TSocketTcp());
 			//todo
@@ -632,7 +638,7 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		TListeners() { NotImplemented(); }
 	public:
-		TListeners(IIOCPEventedPtr iocp) : iocp(iocp) { Verify(nullptr != iocp); }
+		TListeners(IIOCPEventedPtr iocp) : iocp(iocp) { Verify(iocp); }
 	public:
 		void Listen(std::string intfc, std::string address, short port, int depth, std::string service) {
 			Verify(listeners.end() != listeners.find(service));
