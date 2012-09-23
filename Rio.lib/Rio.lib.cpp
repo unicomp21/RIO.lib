@@ -8,6 +8,8 @@
 
 int _tmain(int argc, _TCHAR* argv[])
 {
+	using namespace MurmurBus;
+
 	TUUID test;
 	std::cout << (std::string)test << std::endl << std::endl;
 
