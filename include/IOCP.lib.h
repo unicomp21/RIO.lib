@@ -239,6 +239,8 @@ namespace MurmurBus { namespace IOCP {
 	////////////////////////////////
 	class TSocket : public ISocket {
 	private:
+		TWSAStartup wsaStartup;
+	private:
 		SOCKET hSocket;
 	private:
 		TWinsockExtensions winsockExtensions;
