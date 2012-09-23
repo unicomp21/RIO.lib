@@ -357,14 +357,16 @@ class TRioBufferManager {
 	friend class TRioSocketQueue;
 	friend class TBuffer;
 public:
+	////////////////////////////////
 	class TBuffer : public RIO_BUF {
+		friend class TRioBufferManager;
 	private:
 		int block_id;
 	private:
 		TRioBufferManager *rioBufferManager;
 	private:
 		TBuffer() { }
-	public:
+	private:
 		TBuffer(int block_id, TRioBufferManager *rioBufferManager) : 
 			block_id(block_id), rioBufferManager(rioBufferManager) { }
 	public:
