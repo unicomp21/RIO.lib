@@ -724,13 +724,13 @@ namespace MurmurBus { namespace RIO {
 		friend class TSessionListenerEx;
 		class TRioSessionListenerEx : public TAcceptEx {
 		private:
-			TRioSessionListenerEx() : TAcceptEx(TIOCP(), "", NULL, NULL) { NotImplemented(); }
+			TRioSessionListenerEx() : TAcceptEx(nullptr, "", NULL, NULL) { NotImplemented(); }
 		private:
 			TRioSessionManager *rioSessionManager;
 		public:
 			TRioSessionListenerEx(TRioSessionManager *rioSessionManager, 
 				std::string intfc, short port, int depth) :
-			TAcceptEx(rioSessionManager->iocp->completion_port(), intfc, port, depth),
+			TAcceptEx(rioSessionManager->iocp, intfc, port, depth),
 				rioSessionManager(rioSessionManager) { }
 		private:
 			void TAcceptEx::Accepted(BOOL status, ISocketPtr socket) {
@@ -757,13 +757,13 @@ namespace MurmurBus { namespace RIO {
 	private:
 		class TRioSessionClientEx : public TClientEx {
 		private:
-			TRioSessionClientEx() : TClientEx(TIOCP(), "", NULL, NULL) { NotImplemented(); }
+			TRioSessionClientEx() : TClientEx(nullptr, "", NULL, NULL) { NotImplemented(); }
 		private:
 			TRioSessionManager *rioSessionManager;
 		public:
 			TRioSessionClientEx(TRioSessionManager *rioSessionManager, 
 				std::string intfc, std::string remote,  short port) : 
-			TClientEx(rioSessionManager->iocp->completion_port(), intfc, remote, port), 
+			TClientEx(rioSessionManager->iocp, intfc, remote, port), 
 				rioSessionManager(rioSessionManager) { }
 		private:
 			void TClientEx::Connected(BOOL status, ISocketPtr socket) {

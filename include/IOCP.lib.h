@@ -7,6 +7,11 @@
 #include <hash_map>
 
 namespace MurmurBus { namespace IOCP {
+	///////////////////////
+	class ISessionManager {
+		//todo
+	}; // ISessionManager
+
 	///////////////////
 	class TWSAStartup {
 	private:
@@ -386,9 +391,9 @@ namespace MurmurBus { namespace IOCP {
 	public:
 		operator SOCKET() { return *acceptor; }
 	public:
-		TAcceptEx(TIOCP &iocp, std::string intfc, short port, int depth) {
+		TAcceptEx(IIOCPEventedPtr iocp, std::string intfc, short port, int depth) {
 			acceptor = ISocketPtr(new TSocketTcp());
-			iocp.Attach(*acceptor);
+			iocp->completion_port().Attach(*acceptor);
 
 			SOCKADDR_IN addr;
 			memset(&addr, 0, sizeof(addr));
@@ -438,10 +443,10 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		TClientEx() { NotImplemented(); }
 	public:
-		TClientEx(TIOCP &iocp, std::string intfc, std::string remote, short port)
+		TClientEx(IIOCPEventedPtr iocp, std::string intfc, std::string remote, short port)
 		{
 			connector = ISocketPtr(new TSocketTcp());
-			iocp.Attach(*connector);
+			iocp->completion_port().Attach(*connector);
 
 			SOCKADDR_IN intfc_addr;
 			memset(&intfc_addr, 0, sizeof(intfc_addr));
@@ -480,11 +485,6 @@ namespace MurmurBus { namespace IOCP {
 		}
 	}; // TSocketUdp
 
-	///////////////////////
-	class ISessionManager {
-		//todo
-	}; // ISessionManager
-
 	////////////////
 	class TSession {
 	public:
@@ -497,6 +497,7 @@ namespace MurmurBus { namespace IOCP {
 		TSession(ISessionManager *iSessionManager) :
 			iSessionManager(iSessionManager) { }
 	}; // TSession
+	typedef std::shared_ptr<TSession> TSessionPtr;
 
 	//////////////////////
 	class TBufferManager {
@@ -563,14 +564,77 @@ namespace MurmurBus { namespace IOCP {
 		}
 	}; // TBufferManager
 
-	///////////////////////
-	class TSessionManager {
+	////////////////////////////////////////////////
+	class TSessionManager : public ISessionManager {
 	private:
-		std::hash_map<std::string /* uuid */, TSession> sessions;
+		std::hash_map<std::string /* uuid */, TSessionPtr> sessions;
 	private:
 		TBufferManager bufferManager;
 	public:
-		//todo
+		enum { max_block_count = 65536 };
+	public:
+		TSessionManager() : bufferManager(max_block_count) { }
+	public:
+		void NewSession(ISocketPtr socket) {
+			//todo
+		}
 	}; // TSessionManager
+
+	/////////////////
+	class TListener {
+		friend class TListenAccept;
+	private:
+		TListener() : acceptor(nullptr, "", 0, 0, NULL) { }
+	private:
+		std::string service;
+	private:
+		TSessionManager sessionManager;
+	private:
+		ISocketPtr listener;
+	private:
+		IIOCPEventedPtr iocp;
+	private:
+		////////////////////////////////////////
+		class TListenAccept : public TAcceptEx {
+		private:
+			TListener *listener;
+		private:
+			TListenAccept() :
+				TAcceptEx(nullptr, "", 0, 0) { }
+		public:
+			TListenAccept(IIOCPEventedPtr iocp, std::string intfc, short port, int depth, TListener *listener) :
+				TAcceptEx(iocp, intfc, port, depth), listener(listener)
+			{ 
+				Verify(NULL != listener);
+			}
+			void TAcceptEx::Accepted(BOOL status, ISocketPtr socket) {
+				Verify(TRUE == status);
+				listener->sessionManager.NewSession(socket);
+			}
+		} acceptor;
+	public:
+		TListener(IIOCPEventedPtr iocp, std::string intfc, 
+			short port, int depth, std::string service) : 
+			iocp(iocp), service (service), acceptor(iocp, intfc, port, depth, this)
+		{
+			listener = ISocketPtr(new TSocketTcp());
+			//todo
+		}
+	};
+	typedef std::shared_ptr<TListener> TListenerPtr;
+
+	//////////////////
+	class TListeners {
+	private:
+		std::hash_map<std::string /*session_id*/, TListenerPtr> listeners;
+	private:
+
+	public:
+		void Listen(IIOCPEventedPtr iocp, std::string intfc, std::string address, short port, int depth, std::string service) {
+			Verify(listeners.end() != listeners.find(service));
+			listeners[service] = TListenerPtr(new TListener(iocp, intfc, port, depth, service));
+		}
+	};
+
 } /*MurmurBus*/ } /* IOCP */
 

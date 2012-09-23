@@ -228,6 +228,7 @@ namespace MurmurBus {
 					pOverlapped->iCompletion->Completed(status, byte_count, pOverlapped);
 				} else {
 					//timeout
+					Verify(false);
 				}
 			}
 		}
