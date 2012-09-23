@@ -628,11 +628,19 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		std::hash_map<std::string /*session_id*/, TListenerPtr> listeners;
 	private:
-
+		IIOCPEventedPtr iocp;
+	private:
+		TListeners() { NotImplemented(); }
 	public:
-		void Listen(IIOCPEventedPtr iocp, std::string intfc, std::string address, short port, int depth, std::string service) {
+		TListeners(IIOCPEventedPtr iocp) : iocp(iocp) { Verify(nullptr != iocp); }
+	public:
+		void Listen(std::string intfc, std::string address, short port, int depth, std::string service) {
 			Verify(listeners.end() != listeners.find(service));
 			listeners[service] = TListenerPtr(new TListener(iocp, intfc, port, depth, service));
+		}
+	public:
+		void SendMessage(std::string &service, std::string &session_id, TMessage &message) {
+			NotImplemented();
 		}
 	};
 
