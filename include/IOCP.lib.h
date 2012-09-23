@@ -44,10 +44,50 @@ namespace MurmurBus { namespace IOCP {
 
 	//////////////////////////
 	class TWinsockExtensions {
+	private:
+		SOCKET socket;
+	private:
+		TWinsockExtensions() { NotImplemented(); }
 	public:
-		TWinsockExtensions() : lpfnTransmitFile(NULL), lpfnAcceptEx(NULL), lpfnGetAcceptExSockAddrs(NULL),
-			lpfnTransmitPackets(NULL), lpfnConnectEx(NULL), lpfnDisconnectEx(NULL), 
-			socket(INVALID_SOCKET) { }
+		TWinsockExtensions(SOCKET socket) :
+			socket(socket), lpfnTransmitFile(NULL), lpfnAcceptEx(NULL), lpfnGetAcceptExSockAddrs(NULL),
+			lpfnTransmitPackets(NULL), lpfnConnectEx(NULL), lpfnDisconnectEx(NULL)
+		{
+			Verify(NULL != socket);
+
+			DWORD dwBytes = 0;
+			int check = 0;
+
+			GUID GUID_WSAID_TRANSMITFILE = WSAID_TRANSMITFILE;
+			check = WSAIoctl(socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &GUID_WSAID_TRANSMITFILE,
+				sizeof(GUID_WSAID_TRANSMITFILE), &lpfnTransmitFile, sizeof (lpfnTransmitFile), &dwBytes, NULL, NULL);
+			Verify(SOCKET_ERROR != check);
+
+			GUID GUID_WSAID_ACCEPTEX = WSAID_ACCEPTEX;
+			check = WSAIoctl(socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &GUID_WSAID_ACCEPTEX,
+				sizeof(GUID_WSAID_ACCEPTEX), &lpfnAcceptEx, sizeof (lpfnAcceptEx), &dwBytes, NULL, NULL);
+			Verify(SOCKET_ERROR != check);
+
+			GUID GUID_WSAID_GETACCEPTEXSOCKADDRS = WSAID_GETACCEPTEXSOCKADDRS;
+			check = WSAIoctl(socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &GUID_WSAID_GETACCEPTEXSOCKADDRS,
+				sizeof(GUID_WSAID_GETACCEPTEXSOCKADDRS), &lpfnGetAcceptExSockAddrs, sizeof (lpfnGetAcceptExSockAddrs), &dwBytes, NULL, NULL);
+			Verify(SOCKET_ERROR != check);
+
+			GUID GUID_WSAID_TRANSMITPACKETS = WSAID_TRANSMITPACKETS;
+			check = WSAIoctl(socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &GUID_WSAID_TRANSMITPACKETS,
+				sizeof(GUID_WSAID_TRANSMITPACKETS), &lpfnTransmitPackets, sizeof (lpfnTransmitPackets), &dwBytes, NULL, NULL);
+			Verify(SOCKET_ERROR != check);
+
+			GUID GUID_WSAID_CONNECTEX = WSAID_CONNECTEX;
+			check = WSAIoctl(socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &GUID_WSAID_CONNECTEX,
+				sizeof(GUID_WSAID_CONNECTEX), &lpfnConnectEx, sizeof (lpfnConnectEx), &dwBytes, NULL, NULL);
+			Verify(SOCKET_ERROR != check);
+
+			GUID GUID_WSAID_DISCONNECTEX = WSAID_DISCONNECTEX;
+			check = WSAIoctl(socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &GUID_WSAID_DISCONNECTEX,
+				sizeof(GUID_WSAID_DISCONNECTEX), &lpfnDisconnectEx, sizeof (lpfnDisconnectEx), &dwBytes, NULL, NULL);
+			Verify(SOCKET_ERROR != check);
+		}
 	private:
 		LPFN_TRANSMITFILE lpfnTransmitFile;
 	public:
@@ -199,47 +239,8 @@ namespace MurmurBus { namespace IOCP {
 			Verify(NULL != socket);
 			return ::WSARecv(socket, lpBuffers, dwBufferCount, NULL, NULL, lpOverlapped, NULL);
 		}
-	private:
-		SOCKET socket;
-	public:
-		void Init(SOCKET socket) {
-			Verify(NULL != socket);
-			this->socket = socket;
-
-			DWORD dwBytes = 0;
-			int check = 0;
-
-			GUID GUID_WSAID_TRANSMITFILE = WSAID_TRANSMITFILE;
-			check = WSAIoctl(socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &GUID_WSAID_TRANSMITFILE,
-				sizeof(GUID_WSAID_TRANSMITFILE), &lpfnTransmitFile, sizeof (lpfnTransmitFile), &dwBytes, NULL, NULL);
-			Verify(SOCKET_ERROR != check);
-
-			GUID GUID_WSAID_ACCEPTEX = WSAID_ACCEPTEX;
-			check = WSAIoctl(socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &GUID_WSAID_ACCEPTEX,
-				sizeof(GUID_WSAID_ACCEPTEX), &lpfnAcceptEx, sizeof (lpfnAcceptEx), &dwBytes, NULL, NULL);
-			Verify(SOCKET_ERROR != check);
-
-			GUID GUID_WSAID_GETACCEPTEXSOCKADDRS = WSAID_GETACCEPTEXSOCKADDRS;
-			check = WSAIoctl(socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &GUID_WSAID_GETACCEPTEXSOCKADDRS,
-				sizeof(GUID_WSAID_GETACCEPTEXSOCKADDRS), &lpfnGetAcceptExSockAddrs, sizeof (lpfnGetAcceptExSockAddrs), &dwBytes, NULL, NULL);
-			Verify(SOCKET_ERROR != check);
-
-			GUID GUID_WSAID_TRANSMITPACKETS = WSAID_TRANSMITPACKETS;
-			check = WSAIoctl(socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &GUID_WSAID_TRANSMITPACKETS,
-				sizeof(GUID_WSAID_TRANSMITPACKETS), &lpfnTransmitPackets, sizeof (lpfnTransmitPackets), &dwBytes, NULL, NULL);
-			Verify(SOCKET_ERROR != check);
-
-			GUID GUID_WSAID_CONNECTEX = WSAID_CONNECTEX;
-			check = WSAIoctl(socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &GUID_WSAID_CONNECTEX,
-				sizeof(GUID_WSAID_CONNECTEX), &lpfnConnectEx, sizeof (lpfnConnectEx), &dwBytes, NULL, NULL);
-			Verify(SOCKET_ERROR != check);
-
-			GUID GUID_WSAID_DISCONNECTEX = WSAID_DISCONNECTEX;
-			check = WSAIoctl(socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &GUID_WSAID_DISCONNECTEX,
-				sizeof(GUID_WSAID_DISCONNECTEX), &lpfnDisconnectEx, sizeof (lpfnDisconnectEx), &dwBytes, NULL, NULL);
-			Verify(SOCKET_ERROR != check);
-		}
 	}; // TWinsockExtensions
+	typedef std::shared_ptr<TWinsockExtensions> TWinsockExtensionsPtr;
 
 	////////////////////////////////
 	class TSocket : public ISocket {
@@ -248,7 +249,7 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		SOCKET hSocket;
 	private:
-		TWinsockExtensions winsockExtensions;
+		TWinsockExtensionsPtr winsockExtensions;
 	private:
 		TSocket() { NotImplemented(); }
 	public:
@@ -256,13 +257,13 @@ namespace MurmurBus { namespace IOCP {
 			hSocket = ::WSASocket(AF_INET, type, protocol,
 				NULL, 0, flags);
 			Verify(INVALID_SOCKET != hSocket);
-			winsockExtensions.Init(hSocket);
+			winsockExtensions = TWinsockExtensionsPtr(new TWinsockExtensions(hSocket));
 		}
 	private:
 		BOOL ISocket::TransmitFile(HANDLE hFile, DWORD nNumberOfBytesToWrite,
 			DWORD nNumberOfBytesPerSend, LPOVERLAPPED lpOverlapped,
 			LPTRANSMIT_FILE_BUFFERS lpTransmitBuffers, DWORD dwReserved) {
-				return winsockExtensions.TransmitFile(hFile, nNumberOfBytesToWrite,
+				return winsockExtensions->TransmitFile(hFile, nNumberOfBytesToWrite,
 					nNumberOfBytesPerSend, lpOverlapped,
 					lpTransmitBuffers, dwReserved
 					);
@@ -271,7 +272,7 @@ namespace MurmurBus { namespace IOCP {
 		BOOL ISocket::AcceptEx(SOCKET sAcceptSocket, PVOID lpOutputBuffer,
 			DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength,
 			LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped) {
-				return winsockExtensions.AcceptEx(
+				return winsockExtensions->AcceptEx(
 					sAcceptSocket, lpOutputBuffer,
 					dwReceiveDataLength, dwLocalAddressLength, dwRemoteAddressLength,
 					lpdwBytesReceived, lpOverlapped
@@ -281,7 +282,7 @@ namespace MurmurBus { namespace IOCP {
 		void ISocket::GetAcceptExSockAddrs(PVOID lpOutputBuffer,	DWORD dwReceiveDataLength,
 			DWORD dwLocalAddressLength,	DWORD dwRemoteAddressLength, struct sockaddr **LocalSockaddr,
 			LPINT LocalSockaddrLength, struct sockaddr **RemoteSockaddr, LPINT RemoteSockaddrLength) {
-				return winsockExtensions.GetAcceptExSockAddrs(
+				return winsockExtensions->GetAcceptExSockAddrs(
 					lpOutputBuffer,	dwReceiveDataLength,
 					dwLocalAddressLength,	dwRemoteAddressLength, LocalSockaddr,
 					LocalSockaddrLength, RemoteSockaddr, RemoteSockaddrLength
@@ -291,7 +292,7 @@ namespace MurmurBus { namespace IOCP {
 		BOOL ISocket::TransmitPackets(LPTRANSMIT_PACKETS_ELEMENT lpPacketArray,                               
 			DWORD nElementCount, DWORD nSendSize, LPOVERLAPPED lpOverlapped,                  
 			DWORD dwFlags) {
-				return winsockExtensions.TransmitPackets(
+				return winsockExtensions->TransmitPackets(
 					lpPacketArray,                               
 					nElementCount, nSendSize, lpOverlapped,                  
 					dwFlags
@@ -301,26 +302,26 @@ namespace MurmurBus { namespace IOCP {
 		BOOL ISocket::ConnectEx(const struct sockaddr FAR *name,
 			int namelen, PVOID lpSendBuffer, DWORD dwSendDataLength,
 			LPDWORD lpdwBytesSent, LPOVERLAPPED lpOverlapped) {
-				return winsockExtensions.ConnectEx(
+				return winsockExtensions->ConnectEx(
 					name, namelen, lpSendBuffer, dwSendDataLength,
 					lpdwBytesSent, lpOverlapped
 					);
 		}
 	private:
 		BOOL ISocket::DisconnectEx(LPOVERLAPPED lpOverlapped, DWORD  dwFlags, DWORD  dwReserved) {
-			return winsockExtensions.DisconnectEx(
+			return winsockExtensions->DisconnectEx(
 				lpOverlapped, dwFlags, dwReserved
 				);
 		}
 	private:
 		BOOL ISocket::Send(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) {
-			return winsockExtensions.Send(
+			return winsockExtensions->Send(
 				lpBuffers, dwBufferCount, lpOverlapped
 				);
 		}
 	private:
 		BOOL ISocket::Recv(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) {
-			return winsockExtensions.Recv(
+			return winsockExtensions->Recv(
 				lpBuffers, dwBufferCount, lpOverlapped
 				);
 		}
@@ -343,19 +344,30 @@ namespace MurmurBus { namespace IOCP {
 		}
 	}; // TSocketTcp
 
-	/////////////////////////////////////
-	class TOverlappedRecv : TOverlapped {
+	////////////////////////////////////////////
+	class TOverlappedRecv : public TOverlapped {
+	private:
+		ISocketPtr socket;
+	private:
+		TWinsockExtensionsPtr winsockExtensions;
 	private:
 		TOverlappedRecv() : TOverlapped(NULL) { NotImplemented(); }
 	public:
-		TOverlappedRecv(ICompletionResult *iCompletionResult, size_t buffer_size) : 
-			TOverlapped(iCompletionResult), buffer(buffer_size) { }
+		TOverlappedRecv(ISocketPtr socket, ICompletionResult *iCompletionResult, size_t buffer_size) : 
+			TOverlapped(iCompletionResult), buffer(buffer_size)
+		{
+			Verify(socket);
+		}
 	public:
 		std::vector<char> buffer;
+	public:
+		void PostRecv() {
+			NotImplemented();
+		}
 	}; // TOverlappedRecv
 
-	/////////////////////////////////////
-	class TOverlappedSend : TOverlapped {
+	////////////////////////////////////////////
+	class TOverlappedSend : public TOverlapped {
 	private:
 		TOverlappedSend() : TOverlapped(NULL) { NotImplemented(); }
 	public:
@@ -485,20 +497,6 @@ namespace MurmurBus { namespace IOCP {
 		}
 	}; // TSocketUdp
 
-	////////////////
-	class TSession {
-	public:
-		TUUID id;
-	private:
-		ISessionManager *iSessionManager;
-	private:
-		TSession() { NotImplemented(); }
-	public:
-		TSession(ISessionManager *iSessionManager) :
-			iSessionManager(iSessionManager) { }
-	}; // TSession
-	typedef std::shared_ptr<TSession> TSessionPtr;
-
 	//////////////////////
 	class TBufferManager {
 	private:
@@ -564,6 +562,66 @@ namespace MurmurBus { namespace IOCP {
 		}
 	}; // TBufferManager
 
+	////////////////
+	class TSession {
+	public:
+		TUUID id;
+	private:
+		ISessionManager *iSessionManager;
+	private:
+		TSession() : recv_loop(ISocketPtr(), this) { NotImplemented(); }
+	private:
+		ISocketPtr socket;
+	private:
+		/////////////////////////////////////////////
+		class TSessionRecv : public TOverlappedRecv {
+		private:
+			TSession *session;
+		private:
+			ISocketPtr socket;
+		private:
+			enum { max_msg_size = 1024 };
+		private:
+			TSessionRecv() : 
+				TOverlappedRecv(ISocketPtr(), NULL, 0), session(NULL), recvCompletion(NULL)
+			{ NotImplemented();	}
+		private:
+			//////////////////////////////////////////////////
+			class TRecvCompletion : public ICompletionResult {
+			private:
+				TSessionRecv *sessionRecv;
+			private:
+				TRecvCompletion() : sessionRecv(NULL) { NotImplemented(); }
+			public:
+				TRecvCompletion(TSessionRecv *sessionRecv) : sessionRecv(sessionRecv) { }
+			private:
+				void Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped)
+				{
+					sessionRecv->CheckForMessage();
+					sessionRecv->PostRecv();
+				}
+			} recvCompletion;
+		public:
+			TSessionRecv(ISocketPtr socket, TSession *session) : 
+				socket(socket), TOverlappedRecv(socket, &recvCompletion, max_msg_size), session(session), recvCompletion(this)
+			{
+				this->PostRecv();
+			}
+		private:
+			void CheckForMessage() {
+				//todo
+			}
+		} /* TSessionRecv */ recv_loop;
+	public:
+		TSession(ISessionManager *iSessionManager, ISocketPtr socket) :
+			iSessionManager(iSessionManager), socket(socket), recv_loop(socket, this)
+		{
+			Verify(NULL != iSessionManager);
+			Verify(socket);
+		}
+	}; // TSession
+	typedef std::shared_ptr<TSession> TSessionPtr;
+
 	////////////////////////////////////////////////
 	class TSessionManager : public ISessionManager {
 	private:
@@ -626,6 +684,10 @@ namespace MurmurBus { namespace IOCP {
 			listener = ISocketPtr(new TSocketTcp());
 			//todo
 		}
+	public:
+		void Send(std::string &session_id, TMessage &message) {
+			NotImplemented();
+		}
 	};
 	typedef std::shared_ptr<TListener> TListenerPtr;
 
@@ -645,8 +707,9 @@ namespace MurmurBus { namespace IOCP {
 			listeners[service] = TListenerPtr(new TListener(iocp, intfc, port, depth, service));
 		}
 	public:
-		void SendMessage(std::string &service, std::string &session_id, TMessage &message) {
-			NotImplemented();
+		void Send(std::string &service, std::string &session_id, TMessage &message) {
+			Verify(listeners.end() != listeners.find(service));
+			listeners[service]->Send(session_id, message);
 		}
 	};
 
