@@ -359,9 +359,9 @@ namespace MurmurBus { namespace IOCP {
 	}; // TOverlappedSend
 
 	///////////////////////////////////////////////
-	class TListenerEx : public ICompletionResult {
+	class TAcceptEx : public ICompletionResult {
 	private:
-		TListenerEx() { NotImplemented(); }
+		TAcceptEx() { NotImplemented(); }
 	private:
 		class TOverlappedListener : public TOverlapped {
 		public:
@@ -386,7 +386,7 @@ namespace MurmurBus { namespace IOCP {
 	public:
 		operator SOCKET() { return *acceptor; }
 	public:
-		TListenerEx(TIOCP &iocp, std::string intfc, short port, int depth) {
+		TAcceptEx(TIOCP &iocp, std::string intfc, short port, int depth) {
 			acceptor = ISocketPtr(new TSocketTcp());
 			iocp.Attach(*acceptor);
 

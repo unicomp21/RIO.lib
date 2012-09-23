@@ -722,18 +722,18 @@ namespace MurmurBus { namespace RIO {
 		}
 	private:
 		friend class TSessionListenerEx;
-		class TRioSessionListenerEx : public TListenerEx {
+		class TRioSessionListenerEx : public TAcceptEx {
 		private:
-			TRioSessionListenerEx() : TListenerEx(TIOCP(), "", NULL, NULL) { NotImplemented(); }
+			TRioSessionListenerEx() : TAcceptEx(TIOCP(), "", NULL, NULL) { NotImplemented(); }
 		private:
 			TRioSessionManager *rioSessionManager;
 		public:
 			TRioSessionListenerEx(TRioSessionManager *rioSessionManager, 
 				std::string intfc, short port, int depth) :
-			TListenerEx(rioSessionManager->iocp->completion_port(), intfc, port, depth),
+			TAcceptEx(rioSessionManager->iocp->completion_port(), intfc, port, depth),
 				rioSessionManager(rioSessionManager) { }
 		private:
-			void TListenerEx::Accepted(BOOL status, ISocketPtr socket) {
+			void TAcceptEx::Accepted(BOOL status, ISocketPtr socket) {
 				Verify(TRUE == status);
 				rioSessionManager->NewServerSession(socket);
 			}
