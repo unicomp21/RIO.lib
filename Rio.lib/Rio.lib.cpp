@@ -9,7 +9,7 @@
 int _tmain(int argc, _TCHAR* argv[])
 {
 	TUUID test;
-	std::cout << (std::string)test << std::endl;
+	std::cout << (std::string)test << std::endl << std::endl;
 
 	TMessage msg;
 	msg["arg1"] = "val1";
