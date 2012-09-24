@@ -651,8 +651,6 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		TSessionManager sessionManager;
 	private:
-		ISocketPtr listener;
-	private:
 		IIOCPEventedPtr iocp;
 	private:
 		////////////////////////////////////////
@@ -679,8 +677,6 @@ namespace MurmurBus { namespace IOCP {
 			short port, int depth, std::string service) : 
 			iocp(iocp), service (service), acceptor(iocp, intfc, port, depth, this), sessionManager(iocp)
 		{
-			listener = ISocketPtr(new TSocketTcp());
-			//todo
 		}
 	public:
 		void Send(std::string &session_id, TMessage &message) {
