@@ -604,14 +604,16 @@ namespace MurmurBus { namespace IOCP {
 			private:
 				TRecvCompletion() : sessionRecv(NULL) { NotImplemented(); }
 			public:
-				TRecvCompletion(TSessionRecv *sessionRecv) : sessionRecv(sessionRecv) { }
+				TRecvCompletion(TSessionRecv *sessionRecv) : sessionRecv(sessionRecv) {
+					Verify(NULL != sessionRecv);
+				}
 			private:
 				void Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped)
 				{
 					sessionRecv->CheckForMessage();
 					sessionRecv->PostRecv();
 				}
-			} recvCompletion;
+			} /* TRecvCompletion */ recvCompletion;
 		public:
 			TSessionRecv(ISocketPtr socket, TSession *session) : 
 				socket(socket), TOverlappedRecv(socket, &recvCompletion, max_msg_size), session(session), recvCompletion(this)
