@@ -685,6 +685,7 @@ namespace MurmurBus { namespace IOCP {
 			{ 
 				Verify(NULL != listener);
 			}
+		private:
 			void TAcceptEx::Accepted(BOOL status, ISocketPtr socket) {
 				Verify(TRUE == status);
 				listener->sessionManager.NewSession(socket);
