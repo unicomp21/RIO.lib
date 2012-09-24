@@ -657,12 +657,13 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		////////////////////////////////////////
 		class TListenAccept : public TAcceptEx {
+			friend class TListener;
 		private:
 			TListener *listener;
 		private:
 			TListenAccept() :
 				TAcceptEx(IIOCPEventedPtr(), "", 0, 0) { NotImplemented(); }
-		public:
+		private:
 			TListenAccept(IIOCPEventedPtr iocp, std::string intfc, short port, int depth, TListener *listener) :
 				TAcceptEx(iocp, intfc, port, depth), listener(listener)
 			{ 
