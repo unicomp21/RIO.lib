@@ -636,8 +636,10 @@ namespace MurmurBus { namespace IOCP {
 			Verify(iocp);
 		}
 	public:
-		void NewSession(ISocketPtr socket) {
-			//todo
+		TSessionPtr NewSession(ISocketPtr socket) {
+			Verify(socket);
+			TSessionPtr session = TSessionPtr(new TSession(this, socket));
+			return session;
 		}
 	}; // TSessionManager
 
