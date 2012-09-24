@@ -361,23 +361,10 @@ namespace MurmurBus { namespace IOCP {
 	////////////////////////////////////////////
 	class TOverlappedRecv : public TOverlapped {
 	private:
-		ISocketPtr socket;
-	private:
-		TWinsockExtensionsPtr winsockExtensions;
-	private:
 		TOverlappedRecv() : TOverlapped(NULL) { NotImplemented(); }
 	public:
-		TOverlappedRecv(ISocketPtr socket, ICompletionResult *iCompletionResult, size_t buffer_size) : 
-			TOverlapped(iCompletionResult), buffer(buffer_size)
-		{
-			Verify(socket);
-		}
-	public:
-		std::vector<char> buffer;
-	public:
-		void PostRecv() {
-			NotImplemented();
-		}
+		TOverlappedRecv(ISocketPtr socket, ICompletionResult *iCompletionResult) : 
+			TOverlapped(iCompletionResult) { }
 	}; // TOverlappedRecv
 
 	////////////////////////////////////////////
