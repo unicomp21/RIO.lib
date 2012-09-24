@@ -235,9 +235,23 @@ namespace MurmurBus { namespace IOCP {
 			return ::WSASend(socket, lpBuffers, dwBufferCount, NULL, 0, lpOverlapped, NULL);
 		}
 	public:
+		BOOL Send(char *buffer, unsigned long len, LPOVERLAPPED lpOverlapped) {
+			WSABUF wsaBuf;
+			wsaBuf.buf = buffer;
+			wsaBuf.len = len;
+			return Send(&wsaBuf, 1, lpOverlapped);
+		}
+	public:
 		BOOL Recv(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) {
 			Verify(NULL != socket);
 			return ::WSARecv(socket, lpBuffers, dwBufferCount, NULL, NULL, lpOverlapped, NULL);
+		}
+	public:
+		BOOL Recv(char *buffer, unsigned long len, LPOVERLAPPED lpOverlapped) {
+			WSABUF wsaBuf;
+			wsaBuf.buf = buffer;
+			wsaBuf.len = len;
+			return Recv(&wsaBuf, 1, lpOverlapped);
 		}
 	}; // TWinsockExtensions
 	typedef std::shared_ptr<TWinsockExtensions> TWinsockExtensionsPtr;
