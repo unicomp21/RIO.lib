@@ -417,28 +417,25 @@ namespace MurmurBus { namespace IOCP {
 			check = ::listen(*acceptor, SOMAXCONN);
 			Verify(SOCKET_ERROR != check);
 
-			for(int i = 0; i < depth; i++) {
-				TOverlappedListener *overlapped_listener = new TOverlappedListener(this);
-				BOOL check = acceptor->AcceptEx(*overlapped_listener->acceptee, 
-					&overlapped_listener->addresses_buffer[0], 0,
-					TOverlappedListener::address_reserve, TOverlappedListener::address_reserve, 
-					&overlapped_listener->byte_count, overlapped_listener);
-				if(FALSE == check)
-					Verify(ERROR_IO_PENDING == ::WSAGetLastError());
-			}
+			for(int i = 0; i < depth; i++)
+				PostAccept();
+		}
+	public:
+		void PostAccept() {
+			TOverlappedListener *overlapped_listener = new TOverlappedListener(this);
+			BOOL check = acceptor->AcceptEx(*overlapped_listener->acceptee, 
+				&overlapped_listener->addresses_buffer[0], 0,
+				TOverlappedListener::address_reserve, TOverlappedListener::address_reserve, 
+				&overlapped_listener->byte_count, overlapped_listener);
+			if(FALSE == check)
+				Verify(ERROR_IO_PENDING == ::WSAGetLastError());
 		}
 	private:
 		void ICompletionResult::Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped) {
 			std::auto_ptr<TOverlappedListener> prev_overlapped_listener(
 				reinterpret_cast<TOverlappedListener*>(overlapped));
 			Accepted(status, prev_overlapped_listener->acceptee);
-			TOverlappedListener *next_overlapped_listener = new TOverlappedListener(this);
-			BOOL check = acceptor->AcceptEx(*next_overlapped_listener->acceptee, 
-				&next_overlapped_listener->addresses_buffer[0], 0,
-				TOverlappedListener::address_reserve, TOverlappedListener::address_reserve, 
-				&next_overlapped_listener->byte_count, *next_overlapped_listener);
-			if(FALSE == check)
-				Verify(ERROR_IO_PENDING == ::WSAGetLastError());
+			PostAccept();
 		}
 	public:
 		virtual void Accepted(BOOL status, ISocketPtr socket) = 0;
