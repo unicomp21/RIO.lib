@@ -170,6 +170,20 @@ namespace MurmurBus {
 		}
 	}; // TMessage
 
+	///////////////////
+	class TRecvBuffer {
+	public:
+		std::vector<char> front_buffer;
+	private:
+		std::vector<char> back_buffer;
+	private:
+		size_t offset;
+	private:
+		TRecvBuffer() { }
+	public:
+		TRecvBuffer(size_t size) : front_buffer(size, 0), back_buffer(size, 0), offset(0) { }
+	};
+
 	/////////////////////////
 	class TOverlapped;
 
