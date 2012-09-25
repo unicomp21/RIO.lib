@@ -363,7 +363,7 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		TOverlappedRecv() : TOverlapped(NULL) { NotImplemented(); }
 	public:
-		TOverlappedRecv(ISocketPtr socket, ICompletionResult *iCompletionResult) : 
+		TOverlappedRecv(ICompletionResult *iCompletionResult) : 
 			TOverlapped(iCompletionResult) { }
 	}; // TOverlappedRecv
 
@@ -578,10 +578,8 @@ namespace MurmurBus { namespace IOCP {
 		private:
 			ISocketPtr socket;
 		private:
-			enum { max_msg_size = 1024 };
-		private:
 			TSessionRecv() : 
-				TOverlappedRecv(ISocketPtr(), NULL, 0), session(NULL), recvCompletion(NULL)
+				TOverlappedRecv(NULL), session(NULL), recvCompletion(NULL)
 			{ NotImplemented();	}
 		private:
 			//////////////////////////////////////////////////
@@ -597,27 +595,44 @@ namespace MurmurBus { namespace IOCP {
 			private:
 				void Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped)
 				{
-					sessionRecv->CheckForMessage();
-					sessionRecv->PostRecv();
+					Verify(TRUE == status);
+					sessionRecv->ProcessMessage(byte_count);
 				}
 			} /* TRecvCompletion */ recvCompletion;
 		public:
 			TSessionRecv(ISocketPtr socket, TSession *session) : 
-				socket(socket), TOverlappedRecv(socket, &recvCompletion, max_msg_size), session(session), recvCompletion(this)
-			{
-				this->PostRecv();
-			}
+				socket(socket), TOverlappedRecv(&recvCompletion), session(session), recvCompletion(this)
+			{ }
 		private:
-			void CheckForMessage() {
-				//todo
+			void ProcessMessage(DWORD byte_count) {
+				session->ProcessMessage(byte_count);
 			}
 		} /* TSessionRecv */ recv_loop;
+	public:
+		enum { max_msg_size = 1024 };
+	private:
+		std::vector<char> recv_buffer;
+	private:
+		void ProcessMessage(DWORD byte_count) {
+			//todo
+			PostRecv();
+		}
+	private:
+		void PostRecv() {
+			recv_loop.Reset();
+			WSABUF wsaBuf;
+			wsaBuf.buf = &recv_buffer[recv_buffer.size()];
+			wsaBuf.len = recv_buffer.capacity() - recv_buffer.size();
+			socket->Recv(&wsaBuf, 1, recv_loop);
+		}
 	public:
 		TSession(ISessionManager *iSessionManager, ISocketPtr socket) :
 			iSessionManager(iSessionManager), socket(socket), recv_loop(socket, this)
 		{
 			Verify(NULL != iSessionManager);
 			Verify(socket);
+			recv_buffer.reserve(max_msg_size);
+			PostRecv();
 		}
 	}; // TSession
 	typedef std::shared_ptr<TSession> TSessionPtr;
