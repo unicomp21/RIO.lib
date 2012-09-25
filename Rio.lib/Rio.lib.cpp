@@ -22,7 +22,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	msg.Append(buffer);
 
 	TMessage msg2;
-	msg2.Read(buffer, 0);
+	size_t next_offset = 0;
+	Verify(true == msg2.Read(buffer, 0, &next_offset));
 	msg2.Dump(std::cout);
 
 	return 0;
