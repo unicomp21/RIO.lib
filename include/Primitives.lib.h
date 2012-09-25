@@ -85,20 +85,20 @@ namespace MurmurBus {
 	private:
 		std::string in_buffer;
 	public:
-		size_t /*end_offset*/ Read(std::vector<char> &buffer, size_t start_offset, __int64 *num) {
+		bool Read(std::vector<char> &buffer, size_t start_offset, size_t *end_offset, __int64 *num) {
 			in_buffer.clear();
-			Verify(start_offset < buffer.size());
+			if(start_offset >= buffer.size()) return false;
 			size_t len = buffer[start_offset] - '0';
 			start_offset++;
-			Verify((start_offset + len) < buffer.size());
-			size_t end_offset = start_offset + len;
+			if((start_offset + len) >= buffer.size()) return false;
+			*end_offset = start_offset + len;
 			in_buffer.insert(in_buffer.begin(), 
-				buffer.begin() + start_offset, buffer.begin() + end_offset);
+				buffer.begin() + start_offset, buffer.begin() + *end_offset);
 			int val = 0;
 			std::stringstream in_reader(in_buffer);
 			in_reader >> val;
 			*num = val;
-			return end_offset;
+			return true;
 		}
 	private:
 		std::string out_buffer;
@@ -127,24 +127,27 @@ namespace MurmurBus {
 	private:
 		std::string key, val;
 	public:
-		size_t Read(std::vector<char> &buffer, size_t offset) {
+		bool Read(std::vector<char> &buffer, size_t start_offset, size_t *end_offset) {
 			__int64 count = 0;
-			offset = number.Read(buffer, offset, &count);
+			if(!number.Read(buffer, start_offset, &start_offset, &count)) return false;
 			__int64 len_key = 0, len_val = 0;
 			for(__int64 i = 0; i < count; i++) {
 				len_key = 0;
-				offset = number.Read(buffer, offset, &len_key);
+				if(!number.Read(buffer, start_offset, &start_offset, &len_key)) return false;
 				key.clear(); key.insert(key.begin(), 
-					buffer.begin() + offset, buffer.begin() + (offset + static_cast<size_t>(len_key)));
-				offset += static_cast<size_t>(len_key);
+					buffer.begin() + start_offset, buffer.begin() + (start_offset + static_cast<size_t>(len_key)));
+				start_offset += static_cast<size_t>(len_key);
+				if(start_offset >= buffer.size()) return false;
 				len_val = 0;
-				offset = number.Read(buffer, offset, &len_val);
+				if(!number.Read(buffer, start_offset, &start_offset, &len_val)) return false;
 				val.clear(); val.insert(val.begin(), 
-					buffer.begin() + offset, buffer.begin() + (offset + static_cast<size_t>(len_val)));
-				offset += static_cast<size_t>(len_val);
+					buffer.begin() + start_offset, buffer.begin() + (start_offset + static_cast<size_t>(len_val)));
+				start_offset += static_cast<size_t>(len_val);
+				if(start_offset > buffer.size()) return false;
 				(*this)[key] = val;
 			}
-			return offset;
+			*end_offset = start_offset;
+			return true;
 		}
 	public:
 		void Append(std::vector<char> &buffer) {
