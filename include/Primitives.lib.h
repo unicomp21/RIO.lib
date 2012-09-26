@@ -215,7 +215,7 @@ namespace MurmurBus {
 	private:
 		HANDLE hIOCP;
 	public:
-		TIOCP() : running(true) {
+		TIOCP() {
 			hIOCP = ::CreateIoCompletionPort(
 				INVALID_HANDLE_VALUE, NULL, 0, 0);
 			Verify(NULL != hIOCP);
@@ -227,9 +227,7 @@ namespace MurmurBus {
 			Verify(NULL != hCheck);
 		}
 	private:
-		volatile bool running;
-	public:
-		void FlushQueue() {
+		bool FlushQueue() {
 			LPOVERLAPPED lpOverlapped = NULL;
 			ULONG_PTR completion_key = 0;
 			DWORD byte_count = 0;
@@ -239,31 +237,21 @@ namespace MurmurBus {
 			if(TRUE == status) {
 				Verify(NULL != pOverlapped->iCompletion);
 				pOverlapped->iCompletion->Completed(status, byte_count, pOverlapped);
+				return true;
 			} else {
 				if(NULL != lpOverlapped) {
 					Verify(NULL != pOverlapped->iCompletion);
 					pOverlapped->iCompletion->Completed(status, byte_count, pOverlapped);
-				} else {
-					//timeout
+					return true;
+				} else { //timeout
 					Verify(false);
+					return false;
 				}
 			}
 		}
 	public:
-		void Run() {
-			while(running) {
-				FlushQueue();
-			}
-		}
-	public:
-		void Stop() {
-			NotImplemented();
-			//todo, running = false
-		}
-	public:
-		void FlushQueueEx() {
-			NotImplemented();
-			//todo, GetQueuedCompletionStatusEx
+		void Flush() {
+			while(true == FlushQueue()) { }
 		}
 	public:
 		virtual ~TIOCP() {
