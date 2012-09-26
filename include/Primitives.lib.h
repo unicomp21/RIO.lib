@@ -29,6 +29,12 @@ namespace MurmurBus {
 		throw std::exception("not implemented");
 	}
 
+	////////////////
+	enum constants {
+		max_msg_size = 1024,
+		max_block_count = 65536
+	};
+
 	/////////////
 	class TUUID {
 	private:
@@ -162,6 +168,21 @@ namespace MurmurBus {
 			}
 		}
 	public:
+		void SoftClear() {
+			for(iterator iter = begin(); iter != end(); iter++)
+				iter->second.clear();
+		}
+	public:
+		bool TryGet(std::string &key, std::string &val) {
+			iterator iter = find(key);
+			if(iter->second.length() > 0) {
+				val = iter->second;
+				return true;
+			} else {
+				return false;
+			}
+		}
+	public:
 		void Dump(std::ostream &out) {
 			for(iterator iter = begin(); iter != end(); iter++) {
 				out << iter->first << ": " << iter->second << std::endl;
@@ -169,20 +190,6 @@ namespace MurmurBus {
 			out << std::endl;
 		}
 	}; // TMessage
-
-	///////////////////
-	class TRecvBuffer {
-	public:
-		std::vector<char> front_buffer;
-	private:
-		std::vector<char> back_buffer;
-	private:
-		size_t offset;
-	private:
-		TRecvBuffer() { }
-	public:
-		TRecvBuffer(size_t size) : front_buffer(size, 0), back_buffer(size, 0), offset(0) { }
-	};
 
 	/////////////////////////
 	class TOverlapped;

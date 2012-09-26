@@ -7,10 +7,30 @@
 #include <hash_map>
 
 namespace MurmurBus { namespace IOCP {
+
+	////////////////
+	class ISession {
+	public:
+		virtual void Send(TMessage &message) = 0;
+	}; // ISession
+	typedef std::shared_ptr<ISession> ISessionPtr;
+
 	///////////////////////
 	class ISessionManager {
-		//todo
+	public:
+		virtual ISessionPtr NewSession(ISocketPtr socket) = 0;
+	public:
+		virtual bool Send(__int64 session_id, TMessage &message) = 0;
+	public:
+		virtual ~ISessionManager() { }
 	}; // ISessionManager
+	typedef std::shared_ptr<ISessionManager> ISessionManagerPtr;
+
+	///////////////////////
+	class IProcessMessage {
+	public:
+		virtual void Process(__int64 session_id, TMessage &message) = 0;
+	}; // IProcessMessage
 
 	///////////////////
 	class TWSAStartup {
@@ -561,13 +581,22 @@ namespace MurmurBus { namespace IOCP {
 	}; // TBufferManager
 
 	////////////////
-	class TSession {
-	public:
-		TUUID id;
+	class TSession : public ISession {
 	private:
-		ISessionManager *iSessionManager;
+		__int64 session_id;
+	private:
+		IProcessMessage *iSessionManager;
 	private:
 		TSession() : recv_loop(ISocketPtr(), this) { NotImplemented(); }
+	public:
+		TSession(__int64 session_id, IProcessMessage *iSessionManager, ISocketPtr socket) :
+			session_id(session_id), iSessionManager(iSessionManager), socket(socket),
+			recv_loop(socket, this), recv_buffer(constants::max_msg_size, 0)
+		{
+			Verify(NULL != iSessionManager);
+			Verify(socket);
+			PostRecv();
+		}
 	private:
 		ISocketPtr socket;
 	private:
@@ -595,7 +624,7 @@ namespace MurmurBus { namespace IOCP {
 			private:
 				void Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped)
 				{
-					Verify(TRUE == status);
+					Verify(TRUE == status); //todo
 					sessionRecv->ProcessMessage(byte_count);
 				}
 			} /* TRecvCompletion */ recvCompletion;
@@ -608,53 +637,74 @@ namespace MurmurBus { namespace IOCP {
 				session->ProcessMessage(byte_count);
 			}
 		} /* TSessionRecv */ recv_loop;
-	public:
-		enum { max_msg_size = 1024 };
 	private:
 		std::vector<char> recv_buffer;
 	private:
+		std::vector<char> message_builder;
+	private:
+		TMessage message;
+	private:
 		void ProcessMessage(DWORD byte_count) {
-			//todo
+			message_builder.insert(message_builder.end(), recv_buffer.begin(), recv_buffer.begin() + byte_count);
+			size_t end_offset = 0;
+			message.SoftClear();
+			while(true == message.Read(message_builder, 0, &end_offset)) {
+				message_builder.erase(message_builder.begin(), message_builder.begin() + end_offset);
+				iSessionManager->Process(session_id, message);
+				end_offset = 0;
+				message.SoftClear();
+			}
 			PostRecv();
 		}
 	private:
 		void PostRecv() {
+			Verify(recv_buffer.size() > 0);
 			recv_loop.Reset();
 			WSABUF wsaBuf;
-			wsaBuf.buf = &recv_buffer[recv_buffer.size()];
-			wsaBuf.len = recv_buffer.capacity() - recv_buffer.size();
+			wsaBuf.buf = &recv_buffer[0];
+			wsaBuf.len = static_cast<ULONG>(recv_buffer.size());
 			socket->Recv(&wsaBuf, 1, recv_loop);
 		}
-	public:
-		TSession(ISessionManager *iSessionManager, ISocketPtr socket) :
-			iSessionManager(iSessionManager), socket(socket), recv_loop(socket, this)
-		{
-			Verify(NULL != iSessionManager);
-			Verify(socket);
-			recv_buffer.reserve(max_msg_size);
-			PostRecv();
+	private:
+		void ISession::Send(TMessage &message) {
+			NotImplemented(); //todo
 		}
 	}; // TSession
-	typedef std::shared_ptr<TSession> TSessionPtr;
 
 	////////////////////////////////////////////////
-	class TSessionManager : public ISessionManager {
+	class TSessionManager : public ISessionManager, public IProcessMessage {
 	private:
-		std::hash_map<std::string /* uuid */, TSessionPtr> sessions;
-	public:
-		enum { max_block_count = 65536 };
+		std::hash_map<__int64 /*session_id*/, ISessionPtr> sessions;
 	private:
 		IIOCPEventedPtr iocp;
+	private:
+		TSessionManager() { }
 	public:
-		TSessionManager(IIOCPEventedPtr iocp) : iocp(iocp)
+		TSessionManager(IIOCPEventedPtr iocp) : iocp(iocp), next_session_id(0)
 		{
 			Verify(iocp);
 		}
-	public:
-		TSessionPtr NewSession(ISocketPtr socket) {
+	private:
+		__int64 next_session_id;
+	private:
+		ISessionPtr ISessionManager::NewSession(ISocketPtr socket) {
 			Verify(socket);
-			TSessionPtr session = TSessionPtr(new TSession(this, socket));
+			ISessionPtr session = ISessionPtr(new TSession(++next_session_id, this, socket));
 			return session;
+		}
+	private:
+		bool ISessionManager::Send(__int64 session_id, TMessage &message) {
+			auto iter = sessions.find(session_id);
+			if(iter != sessions.end()) {
+				iter->second->Send(message);
+				return true;
+			} else {
+				return false;
+			}
+		}
+	private:
+		void IProcessMessage::Process(__int64 session_id, TMessage &message) {
+			//todo
 		}
 	}; // TSessionManager
 
@@ -662,11 +712,11 @@ namespace MurmurBus { namespace IOCP {
 	class TListener {
 		friend class TListenAccept;
 	private:
-		TListener() : acceptor(IIOCPEventedPtr(), "", 0, 0, NULL), sessionManager(IIOCPEventedPtr()) { NotImplemented(); }
+		TListener() : acceptor(IIOCPEventedPtr(), "", 0, 0, NULL) { NotImplemented(); }
 	private:
 		std::string service;
 	private:
-		TSessionManager sessionManager;
+		ISessionManagerPtr sessionManager;
 	private:
 		IIOCPEventedPtr iocp;
 	private:
@@ -687,18 +737,20 @@ namespace MurmurBus { namespace IOCP {
 		private:
 			void TAcceptEx::Accepted(BOOL status, ISocketPtr socket) {
 				Verify(TRUE == status);
-				listener->sessionManager.NewSession(socket);
+				listener->sessionManager->NewSession(socket);
 			}
 		} acceptor;
 	public:
 		TListener(IIOCPEventedPtr iocp, std::string intfc, 
 			short port, int depth, std::string service) : 
-			iocp(iocp), service (service), acceptor(iocp, intfc, port, depth, this), sessionManager(iocp)
+			iocp(iocp), service (service), acceptor(iocp, intfc, port, depth, this)
 		{
+			Verify(iocp);
+			sessionManager = ISessionManagerPtr(new TSessionManager(iocp));
 		}
 	public:
-		void Send(std::string &session_id, TMessage &message) {
-			NotImplemented();
+		void Send(__int64 session_id, TMessage &message) {
+			//todo
 		}
 	};
 	typedef std::shared_ptr<TListener> TListenerPtr;
@@ -719,7 +771,7 @@ namespace MurmurBus { namespace IOCP {
 			listeners[service] = TListenerPtr(new TListener(iocp, intfc, port, depth, service));
 		}
 	public:
-		void Send(std::string &service, std::string &session_id, TMessage &message) {
+		void Send(std::string &service, __int64 session_id, TMessage &message) {
 			Verify(listeners.end() != listeners.find(service));
 			listeners[service]->Send(session_id, message);
 		}
