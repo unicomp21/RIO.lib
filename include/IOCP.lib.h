@@ -678,10 +678,14 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		IIOCPEventedPtr iocp;
 	private:
+		IProcessMessage *iListenerProcessMessage;
+	private:
 		TSessionManager() { }
 	public:
-		TSessionManager(IIOCPEventedPtr iocp) : iocp(iocp), next_session_id(0)
+		TSessionManager(IProcessMessage *iListenerProcessMessage, IIOCPEventedPtr iocp) : 
+			iListenerProcessMessage(iListenerProcessMessage), iocp(iocp), next_session_id(0)
 		{
+			Verify(NULL != iListenerProcessMessage);
 			Verify(iocp);
 		}
 	private:
@@ -704,12 +708,12 @@ namespace MurmurBus { namespace IOCP {
 		}
 	private:
 		void IProcessMessage::Process(__int64 session_id, TMessage &message) {
-			//todo
+			iListenerProcessMessage->Process(session_id, message);
 		}
 	}; // TSessionManager
 
 	/////////////////
-	class TListener {
+	class TListener : public IProcessMessage {
 		friend class TListenAccept;
 	private:
 		TListener() : acceptor(IIOCPEventedPtr(), "", 0, 0, NULL) { NotImplemented(); }
@@ -746,11 +750,16 @@ namespace MurmurBus { namespace IOCP {
 			iocp(iocp), service (service), acceptor(iocp, intfc, port, depth, this)
 		{
 			Verify(iocp);
-			sessionManager = ISessionManagerPtr(new TSessionManager(iocp));
+			sessionManager = ISessionManagerPtr(new TSessionManager(this, iocp));
+		}
+	private:
+		void IProcessMessage::Process(__int64 session_id, TMessage &message) {
+			NotImplemented();
+			//todo, message processing
 		}
 	public:
-		void Send(__int64 session_id, TMessage &message) {
-			//todo
+		bool Send(__int64 session_id, TMessage &message) {
+			return sessionManager->Send(session_id, message);
 		}
 	};
 	typedef std::shared_ptr<TListener> TListenerPtr;
