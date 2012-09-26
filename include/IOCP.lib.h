@@ -421,7 +421,7 @@ namespace MurmurBus { namespace IOCP {
 			for(int i = 0; i < depth; i++)
 				PostAccept();
 		}
-	public:
+	private:
 		void PostAccept() {
 			TOverlappedListener *overlapped_listener = new TOverlappedListener(this);
 			BOOL check = acceptor->AcceptEx(*overlapped_listener->acceptee, 
