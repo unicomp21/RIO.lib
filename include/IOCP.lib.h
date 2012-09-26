@@ -496,7 +496,7 @@ namespace MurmurBus { namespace IOCP {
 	}; // TSocketUdp
 
 	//////////////////////
-	class TBufferManager {
+	class TRingBufferManager {
 	private:
 		int block_count;
 	private:
@@ -506,10 +506,10 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		std::vector<char> parent_buffer;
 	private:
-		TBufferManager() : block_count(0), block_size(0), next_seqno(0),
+		TRingBufferManager() : block_count(0), block_size(0), next_seqno(0),
 			parent_buffer(0) { NotImplemented(); }
 	public:
-		TBufferManager(int block_count, int block_size = 1024) :
+		TRingBufferManager(int block_count, int block_size = 1024) :
 			block_count(block_count), block_size(block_size),
 			next_seqno(0), parent_buffer(block_count * block_size) { }
 	public:
@@ -641,15 +641,12 @@ namespace MurmurBus { namespace IOCP {
 	class TSessionManager : public ISessionManager {
 	private:
 		std::hash_map<std::string /* uuid */, TSessionPtr> sessions;
-	private:
-		TBufferManager bufferManager;
 	public:
 		enum { max_block_count = 65536 };
 	private:
 		IIOCPEventedPtr iocp;
 	public:
-		TSessionManager(IIOCPEventedPtr iocp) : 
-			iocp(iocp), bufferManager(max_block_count)
+		TSessionManager(IIOCPEventedPtr iocp) : iocp(iocp)
 		{
 			Verify(iocp);
 		}
