@@ -24,8 +24,10 @@ namespace MurmurBus { namespace RIO {
 		TRioExtensions::TRioExtensions() { }
 	public:
 		TRioExtensions::TRioExtensions(SOCKET socket) : socket(INVALID_SOCKET) {
-			Verify(INVALID_SOCKET != socket);
-			Verify(NULL != socket);
+			Init(socket);
+		}
+	public:
+		void Init(SOCKET socket) {
 			this->socket = socket;
 			memset(&function_table, 0, sizeof(function_table));
 			function_table.cbSize = sizeof(function_table);
@@ -506,9 +508,11 @@ namespace MurmurBus { namespace RIO {
 	private:
 		RIO_RQ rq;
 	private:
-		TRioSocketQueue() { NotImplemented(); }
+		TRioSocketQueue() : rio_extensions(NULL) { NotImplemented(); }
 	public:
-		TRioSocketQueue(int type, int protocol, unsigned long depth, RIO_CQ completion_queue) : rq(NULL) {
+		TRioSocketQueue(int type, int protocol, unsigned long depth, RIO_CQ completion_queue) :
+			rq(NULL), rio_extensions(NULL)
+		{
 			socket = ISocketPtr(new TSocket(type, protocol, WSA_FLAG_REGISTERED_IO));
 			rio_extensions.Init(*socket);
 			rq = rio_extensions.RIOCreateRequestQueue(
