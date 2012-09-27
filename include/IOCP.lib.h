@@ -67,7 +67,7 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		SOCKET socket;
 	private:
-		TWinsockExtensions() { NotImplemented(); }
+		TWinsockExtensions();
 	public:
 		TWinsockExtensions(SOCKET socket) :
 			socket(socket), lpfnTransmitFile(NULL), lpfnAcceptEx(NULL), lpfnGetAcceptExSockAddrs(NULL),
@@ -285,7 +285,7 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		TWinsockExtensionsPtr winsockExtensions;
 	private:
-		TSocket::TSocket() { NotImplemented(); }
+		TSocket::TSocket();
 	public:
 		TSocket::TSocket(int type, int protocol, int flags) : hSocket(NULL) {
 			hSocket = ::WSASocket(AF_INET, type, protocol,
@@ -381,7 +381,7 @@ namespace MurmurBus { namespace IOCP {
 	////////////////////////////////////////////
 	class TOverlappedRecv : public TOverlapped {
 	private:
-		TOverlappedRecv::TOverlappedRecv() : TOverlapped(NULL) { NotImplemented(); }
+		TOverlappedRecv::TOverlappedRecv();
 	public:
 		TOverlappedRecv::TOverlappedRecv(ICompletionResult *iCompletionResult) : 
 			TOverlapped(iCompletionResult) { }
@@ -390,7 +390,7 @@ namespace MurmurBus { namespace IOCP {
 	////////////////////////////////////////////
 	class TOverlappedSend : public TOverlapped {
 	private:
-		TOverlappedSend::TOverlappedSend() : TOverlapped(NULL) { NotImplemented(); }
+		TOverlappedSend::TOverlappedSend();
 	public:
 		TOverlappedSend::TOverlappedSend(ICompletionResult *iCompletionResult) :
 			TOverlapped(iCompletionResult) { }
@@ -399,7 +399,7 @@ namespace MurmurBus { namespace IOCP {
 	///////////////////////////////////////////////
 	class TAcceptEx : public ICompletionResult {
 	private:
-		TAcceptEx::TAcceptEx() { NotImplemented(); }
+		TAcceptEx::TAcceptEx();
 	private:
 		class TOverlappedListener : public TOverlapped {
 		public:
@@ -463,17 +463,17 @@ namespace MurmurBus { namespace IOCP {
 	}; // TAcceptEx
 
 	/////////////////////////////////////////////
-	class TClientEx : public ICompletionResult {
+	class TConnectEx : public ICompletionResult {
 	private:
 		ISocketPtr connector;
 	public:
-		operator TClientEx::SOCKET() { return *connector; }
+		operator TConnectEx::SOCKET() { return *connector; }
 	private:
 		std::shared_ptr<TOverlapped> connect_notify;
 	private:
-		TClientEx::TClientEx() { NotImplemented(); }
+		TConnectEx::TConnectEx();
 	public:
-		TClientEx::TClientEx(IIOCPEventedPtr iocp, std::string intfc, std::string remote, short port)
+		TConnectEx::TConnectEx(IIOCPEventedPtr iocp, std::string intfc, std::string remote, short port)
 		{
 			connector = ISocketPtr(new TSocketTcp());
 			iocp->completion_port().Attach(*connector);
@@ -505,8 +505,8 @@ namespace MurmurBus { namespace IOCP {
 			Connected(status, connector);
 		}
 	protected:
-		virtual void TClientEx::Connected(BOOL status, ISocketPtr socket) = 0;
-	}; // TClientEx
+		virtual void TConnectEx::Connected(BOOL status, ISocketPtr socket) = 0;
+	}; // TConnectEx
 
 	///////////////////////////////////
 	class TSocketUdp : public TSocket {
@@ -526,8 +526,7 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		std::vector<char> parent_buffer;
 	private:
-		TRingBufferManager::TRingBufferManager() : block_count(0), block_size(0), next_seqno(0),
-			parent_buffer(0) { NotImplemented(); }
+		TRingBufferManager::TRingBufferManager();
 	public:
 		TRingBufferManager::TRingBufferManager(int block_count, int block_size = 1024) :
 			block_count(block_count), block_size(block_size),
@@ -587,7 +586,7 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		IProcessMessage *iSessionManager;
 	private:
-		TSession::TSession() : recv_loop(ISocketPtr(), this) { NotImplemented(); }
+		TSession::TSession();
 	public:
 		TSession::TSession(__int64 session_id, IProcessMessage *iSessionManager, ISocketPtr socket) :
 			session_id(session_id), iSessionManager(iSessionManager), socket(socket),
@@ -616,7 +615,7 @@ namespace MurmurBus { namespace IOCP {
 			private:
 				TSessionRecv *sessionRecv;
 			private:
-				TRecvCompletion::TRecvCompletion() : sessionRecv(NULL) { NotImplemented(); }
+				TRecvCompletion::TRecvCompletion();
 			public:
 				TRecvCompletion::TRecvCompletion(TSessionRecv *sessionRecv) : sessionRecv(sessionRecv) {
 					Verify(NULL != sessionRecv);
@@ -680,7 +679,7 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		IProcessMessage *iListenerProcessMessage;
 	private:
-		TSessionManager::TSessionManager() { }
+		TSessionManager::TSessionManager();
 	public:
 		TSessionManager::TSessionManager(IProcessMessage *iListenerProcessMessage, IIOCPEventedPtr iocp) : 
 			iListenerProcessMessage(iListenerProcessMessage), iocp(iocp), next_session_id(0)
@@ -718,11 +717,11 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		IProcessMessage *iProcessMessage;
 	private:
-		TListener::TListener() : acceptor(IIOCPEventedPtr(), "", 0, 0, NULL) { NotImplemented(); }
+		TListener::TListener();
 	public:
-		TListener::TListener(IIOCPEventedPtr iocp, std::string intfc, 
-			short port, int depth, IProcessMessage *iProcessMessage) : 
-			iocp(iocp), acceptor(iocp, intfc, port, depth, this), iProcessMessage(iProcessMessage)
+		TListener::TListener(
+			IIOCPEventedPtr iocp, std::string intfc, short port, int depth, IProcessMessage *iProcessMessage) : 
+			iocp(iocp), acceptor(iocp, intfc, port, depth, this), iProcessMessage(iProcessMessage), connect_queue(iocp, this)
 		{
 			Verify(NULL != iProcessMessage);
 			Verify(iocp);
@@ -739,8 +738,7 @@ namespace MurmurBus { namespace IOCP {
 		private:
 			TListener *listener;
 		private:
-			TListenAccept::TListenAccept() :
-				TAcceptEx(IIOCPEventedPtr(), "", 0, 0) { NotImplemented(); }
+			TListenAccept::TListenAccept();
 		private:
 			TListenAccept(IIOCPEventedPtr iocp, std::string intfc, short port, int depth, TListener *listener) :
 				TAcceptEx(iocp, intfc, port, depth), listener(listener)

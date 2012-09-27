@@ -763,18 +763,18 @@ namespace MurmurBus { namespace RIO {
 			InitCompletionQueue(*listener);
 		}
 	private:
-		class TRioSessionClientEx : public TClientEx {
+		class TRioSessionClientEx : public TConnectEx {
 		private:
-			TRioSessionClientEx() : TClientEx(IIOCPEventedPtr(), "", NULL, NULL) { NotImplemented(); }
+			TRioSessionClientEx() : TConnectEx(IIOCPEventedPtr(), "", NULL, NULL) { NotImplemented(); }
 		private:
 			TRioSessionManager *rioSessionManager;
 		public:
 			TRioSessionClientEx(TRioSessionManager *rioSessionManager, 
 				std::string intfc, std::string remote,  short port) : 
-			TClientEx(rioSessionManager->iocp, intfc, remote, port), 
+			TConnectEx(rioSessionManager->iocp, intfc, remote, port), 
 				rioSessionManager(rioSessionManager) { }
 		private:
-			void TClientEx::Connected(BOOL status, ISocketPtr socket) {
+			void TConnectEx::Connected(BOOL status, ISocketPtr socket) {
 				Verify(TRUE == status);
 				rioSessionManager->NewClientSession(socket);
 			}
@@ -783,6 +783,7 @@ namespace MurmurBus { namespace RIO {
 	private:
 		void NewClientSession(ISocketPtr socket) {
 			//todo
+			NotImplemented();
 		}
 	public:
 		void Connect(std::string intfc, std::string remote_address, 
