@@ -20,17 +20,30 @@ namespace MurmurBus { namespace RIO {
 
 	//////////////////////
 	class TRioExtensions {
+	private:
+		TRioExtensions::TRioExtensions() { }
 	public:
-		TRioExtensions() : socket(INVALID_SOCKET) {
+		TRioExtensions::TRioExtensions(SOCKET socket) : socket(INVALID_SOCKET) {
+			Verify(INVALID_SOCKET != socket);
+			Verify(NULL != socket);
+			this->socket = socket;
 			memset(&function_table, 0, sizeof(function_table));
 			function_table.cbSize = sizeof(function_table);
+
+			DWORD dwBytes = 0;
+			int check = 0;
+
+			GUID GUID_WSAID_MULTIPLE_RIO = WSAID_MULTIPLE_RIO;
+			check = WSAIoctl(socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &GUID_WSAID_MULTIPLE_RIO,
+				sizeof(GUID_WSAID_MULTIPLE_RIO), &function_table, sizeof (function_table), &dwBytes, NULL, NULL);
+			Verify(SOCKET_ERROR != check);
 		}
 	private:
 		SOCKET socket;
 	private:
 		RIO_EXTENSION_FUNCTION_TABLE function_table;
 	public:
-		BOOL RIOReceive(
+		BOOL TRioExtensions::RIOReceive(
 			RIO_RQ SocketQueue,
 			PRIO_BUF pData,
 			ULONG DataBufferCount,
@@ -49,7 +62,7 @@ namespace MurmurBus { namespace RIO {
 				);
 		}
 	public:
-		BOOL RIOReceiveEx(
+		BOOL TRioExtensions::RIOReceiveEx(
 			RIO_RQ SocketQueue,
 			PRIO_BUF pData,
 			ULONG DataBufferCount,
@@ -76,7 +89,7 @@ namespace MurmurBus { namespace RIO {
 				);
 		}
 	public:
-		BOOL RIOSend(
+		BOOL TRioExtensions::RIOSend(
 			RIO_RQ SocketQueue,
 			PRIO_BUF pData,
 			ULONG DataBufferCount,
@@ -95,7 +108,7 @@ namespace MurmurBus { namespace RIO {
 				);
 		}
 	public:
-		BOOL RIOSendEx(
+		BOOL TRioExtensions::RIOSendEx(
 			RIO_RQ SocketQueue,
 			PRIO_BUF pData,
 			ULONG DataBufferCount,
@@ -122,7 +135,7 @@ namespace MurmurBus { namespace RIO {
 				);
 		}
 	public:
-		VOID RIOCloseCompletionQueue(
+		VOID TRioExtensions::RIOCloseCompletionQueue(
 			RIO_CQ CQ
 			)
 		{
@@ -133,7 +146,7 @@ namespace MurmurBus { namespace RIO {
 				);
 		}
 	public:
-		RIO_CQ RIOCreateCompletionQueue(
+		RIO_CQ TRioExtensions::RIOCreateCompletionQueue(
 			DWORD QueueSize,
 			PRIO_NOTIFICATION_COMPLETION NotificationCompletion
 			)
@@ -146,7 +159,7 @@ namespace MurmurBus { namespace RIO {
 				);
 		}
 	public:
-		RIO_RQ RIOCreateRequestQueue(
+		RIO_RQ TRioExtensions::RIOCreateRequestQueue(
 			ULONG MaxOutstandingReceive,
 			ULONG MaxReceiveDataBuffers,
 			ULONG MaxOutstandingSend,
@@ -170,7 +183,7 @@ namespace MurmurBus { namespace RIO {
 				);
 		}
 	public:
-		ULONG RIODequeueCompletion(
+		ULONG TRioExtensions::RIODequeueCompletion(
 			RIO_CQ CQ,
 			PRIORESULT Array,
 			ULONG ArraySize
@@ -185,7 +198,7 @@ namespace MurmurBus { namespace RIO {
 				);
 		}
 	public:
-		VOID RIODeregisterBuffer(
+		VOID TRioExtensions::RIODeregisterBuffer(
 			RIO_BUFFERID BufferId
 			)
 		{
@@ -196,7 +209,7 @@ namespace MurmurBus { namespace RIO {
 				);
 		}
 	public:
-		INT RIONotify(
+		INT TRioExtensions::RIONotify(
 			RIO_CQ CQ
 			)
 		{
@@ -207,7 +220,7 @@ namespace MurmurBus { namespace RIO {
 				);
 		}
 	public:
-		RIO_BUFFERID RIORegisterBuffer(
+		RIO_BUFFERID TRioExtensions::RIORegisterBuffer(
 			PCHAR DataBuffer,
 			DWORD DataLength
 			)
@@ -220,7 +233,7 @@ namespace MurmurBus { namespace RIO {
 				);
 		}
 	public:
-		BOOL RIOResizeCompletionQueue(
+		BOOL TRioExtensions::RIOResizeCompletionQueue(
 			RIO_CQ CQ,
 			DWORD QueueSize
 			)
@@ -233,7 +246,7 @@ namespace MurmurBus { namespace RIO {
 				);
 		}
 	public:
-		BOOL RIOResizeRequestQueue(
+		BOOL TRioExtensions::RIOResizeRequestQueue(
 			RIO_RQ RQ,
 			DWORD MaxOutstandingReceive,
 			DWORD MaxOutstandingSend
@@ -247,27 +260,13 @@ namespace MurmurBus { namespace RIO {
 				MaxOutstandingSend
 				);
 		}
-	public:
-		void Init(SOCKET socket) {
-			Verify(INVALID_SOCKET != socket);
-			Verify(NULL != socket);
-			this->socket = socket;
-
-			DWORD dwBytes = 0;
-			int check = 0;
-
-			GUID GUID_WSAID_MULTIPLE_RIO = WSAID_MULTIPLE_RIO;
-			check = WSAIoctl(socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &GUID_WSAID_MULTIPLE_RIO,
-				sizeof(GUID_WSAID_MULTIPLE_RIO), &function_table, sizeof (function_table), &dwBytes, NULL, NULL);
-			Verify(SOCKET_ERROR != check);
-		}
 	}; // TRioExtensions
 
 	/////////////////////////////
 	class TRioRingBufferManager {
 		friend class TRioSocketQueue;
 	private:
-		TRioRingBufferManager() { NotImplemented(); }
+		TRioRingBufferManager() : rio_extensions(NULL) { NotImplemented(); }
 	private:
 		TRioExtensions rio_extensions;
 	private:
@@ -292,9 +291,10 @@ namespace MurmurBus { namespace RIO {
 		TRioRingBufferManager(SOCKET socket, DWORD block_count, DWORD block_size = 1024) : 
 			parent_buffer(block_size * block_count), bufferid(RIO_INVALID_BUFFERID),
 			next_seqno(0), block_size(block_size), max_payload_size(block_size - sizeof(TBlockHeader)),
-			block_count(block_count)
+			block_count(block_count), rio_extensions(socket)
 		{
-			rio_extensions.Init(socket);
+			Verify(NULL != socket);
+			Verify(INVALID_SOCKET != socket);
 			bufferid = rio_extensions.RIORegisterBuffer(
 				&parent_buffer[0], static_cast<DWORD>(block_size * block_count));
 			Verify(RIO_INVALID_BUFFERID != bufferid);
@@ -377,7 +377,7 @@ namespace MurmurBus { namespace RIO {
 			~TBuffer() { rioBufferManager->free_blocks.insert(block_id); }
 		};
 	private:
-		TRioBufferManager() { NotImplemented(); }
+		TRioBufferManager() : rio_extensions(NULL) { NotImplemented(); }
 	private:
 		TRioExtensions rio_extensions;
 	private:
@@ -395,9 +395,10 @@ namespace MurmurBus { namespace RIO {
 	private:
 		TRioBufferManager(SOCKET socket, DWORD block_count, DWORD block_size = 1024) : 
 			parent_buffer(block_size * block_count), bufferid(RIO_INVALID_BUFFERID),
-			block_size(block_size),	block_count(block_count)
+			block_size(block_size),	block_count(block_count), rio_extensions(socket)
 		{
-			rio_extensions.Init(socket);
+			Verify(NULL != socket);
+			Verify(INVALID_SOCKET != socket);
 			bufferid = rio_extensions.RIORegisterBuffer(
 				&parent_buffer[0], static_cast<DWORD>(block_size * block_count));
 			Verify(RIO_INVALID_BUFFERID != bufferid);
@@ -423,7 +424,7 @@ namespace MurmurBus { namespace RIO {
 	class TRioCompletionQueue {
 		friend class TRioSocketQueue;
 	private:
-		TRioCompletionQueue() { NotImplemented(); }
+		TRioCompletionQueue() : rio_extensions(NULL) { NotImplemented(); }
 	private:
 		TRioExtensions rio_extensions;
 	private:
@@ -431,8 +432,11 @@ namespace MurmurBus { namespace RIO {
 	public:
 		operator RIO_CQ() { return cq; }
 	public:
-		TRioCompletionQueue(SOCKET socket, DWORD queue_size, HANDLE hEvent) : cq(RIO_INVALID_CQ) {
-			rio_extensions.Init(socket);
+		TRioCompletionQueue(SOCKET socket, DWORD queue_size, HANDLE hEvent) : 
+			cq(RIO_INVALID_CQ), rio_extensions(socket)
+		{
+			Verify(NULL != socket);
+			Verify(INVALID_SOCKET != socket);
 			RIO_NOTIFICATION_COMPLETION notification_completion;
 			memset(&notification_completion, 0, sizeof(notification_completion));
 			notification_completion.Type = RIO_EVENT_COMPLETION;
