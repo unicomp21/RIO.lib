@@ -671,7 +671,7 @@ namespace MurmurBus { namespace IOCP {
 		}
 	}; // TSession
 
-	////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////
 	class TSessionManager : public ISessionManager, public IProcessMessage {
 	private:
 		std::hash_map<__int64 /*session_id*/, ISessionPtr> sessions;
@@ -716,9 +716,18 @@ namespace MurmurBus { namespace IOCP {
 	class TListener : public IProcessMessage {
 		friend class TListenAccept;
 	private:
-		TListener::TListener() : acceptor(IIOCPEventedPtr(), "", 0, 0, NULL) { NotImplemented(); }
+		IProcessMessage *iProcessMessage;
 	private:
-		std::string service;
+		TListener::TListener() : acceptor(IIOCPEventedPtr(), "", 0, 0, NULL) { NotImplemented(); }
+	public:
+		TListener::TListener(IIOCPEventedPtr iocp, std::string intfc, 
+			short port, int depth, IProcessMessage *iProcessMessage) : 
+			iocp(iocp), acceptor(iocp, intfc, port, depth, this), iProcessMessage(iProcessMessage)
+		{
+			Verify(NULL != iProcessMessage);
+			Verify(iocp);
+			sessionManager = ISessionManagerPtr(new TSessionManager(this, iocp));
+		}
 	private:
 		ISessionManagerPtr sessionManager;
 	private:
@@ -744,14 +753,6 @@ namespace MurmurBus { namespace IOCP {
 				listener->sessionManager->NewSession(socket);
 			}
 		} acceptor;
-	public:
-		TListener::TListener(IIOCPEventedPtr iocp, std::string intfc, 
-			short port, int depth, std::string service) : 
-			iocp(iocp), service (service), acceptor(iocp, intfc, port, depth, this)
-		{
-			Verify(iocp);
-			sessionManager = ISessionManagerPtr(new TSessionManager(this, iocp));
-		}
 	private:
 		void IProcessMessage::Process(__int64 session_id, TMessage &message) {
 			NotImplemented();
@@ -764,27 +765,17 @@ namespace MurmurBus { namespace IOCP {
 	};
 	typedef std::shared_ptr<TListener> TListenerPtr;
 
-	//////////////////
-	class TListeners {
+	//////////////////////////////////////////
+	class TEchoTest : public IProcessMessage {
 	private:
-		std::hash_map<std::string /*session_id*/, TListenerPtr> listeners;
+		TEchoTest() : listener(IIOCPEventedPtr(), "", 0, 0, 0) { }
 	private:
-		IIOCPEventedPtr iocp;
+		TListener listener;
 	private:
-		TListeners::TListeners() { NotImplemented(); }
+		int client_count;
 	public:
-		TListeners::TListeners(IIOCPEventedPtr iocp) : iocp(iocp) { Verify(iocp); }
-	public:
-		void TListeners::Listen(std::string intfc, std::string address, short port, int depth, std::string service) {
-			Verify(listeners.end() != listeners.find(service));
-			listeners[service] = TListenerPtr(new TListener(iocp, intfc, port, depth, service));
-		}
-	public:
-		void TListeners::Send(std::string &service, __int64 session_id, TMessage &message) {
-			Verify(listeners.end() != listeners.find(service));
-			listeners[service]->Send(session_id, message);
+		TEchoTest(IIOCPEventedPtr iocp) : listener(iocp, "127.0.0.1", 333, 128, this), client_count(0) {
 		}
 	};
 
 } /*MurmurBus*/ } /* IOCP */
-
