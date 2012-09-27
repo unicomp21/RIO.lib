@@ -838,22 +838,32 @@ namespace MurmurBus { namespace IOCP {
 		TEchoTest();
 	public:
 		TEchoTest(IIOCPEventedPtr iocp, std::string intfc, short port, int depth, IProcessMessage *iProcessMessage) :
-			listener(iocp, intfc, port, depth, this), client_count(0) { }
+			listener(iocp, intfc, port, depth, this) { }
 	private:
 		/////////////////////////////////////////
 		class TListenerLocal : public TListener {
 		private:
+			std::string intfc;
+		private:
+			short port;
+		private:
+			int client_count;
+		private:
 			TListenerLocal::TListenerLocal();
 		public:
 			TListenerLocal(IIOCPEventedPtr iocp, std::string intfc, short port, int depth, IProcessMessage *iProcessMessage) :
-				TListener(iocp, intfc, port, depth, iProcessMessage) { }
+				TListener(iocp, intfc, port, depth, iProcessMessage), intfc(intfc), port(port), client_count(0)
+			{
+				Connect(intfc, intfc, port);
+			}
 		private:
 			void TListener::Connected(ISessionPtr session) {
-				//todo
+				client_count++;
+				if(client_count < 1024)
+					Connect(intfc, intfc, port);
+				//todo, session send msg
 			}
 		} listener;
-	private:
-		int client_count;
 	private:
 		void IProcessMessage::Process(__int64 session_id, TMessage &message) {
 			//todo
