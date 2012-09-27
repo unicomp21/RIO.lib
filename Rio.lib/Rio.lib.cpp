@@ -6,6 +6,8 @@
 #include "../include/RIO.lib.h"
 #include <iostream>
 
+using namespace MurmurBus::IOCP;
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	using namespace MurmurBus;
@@ -25,6 +27,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	size_t next_offset = 0;
 	Verify(true == msg2.Read(buffer, 0, &next_offset));
 	msg2.Dump(std::cout);
+
+	IIOCPEventedPtr iocp_evented = IIOCPEventedPtr(new TIOCPEvented());
+
 
 	return 0;
 }
