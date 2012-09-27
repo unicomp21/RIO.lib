@@ -508,6 +508,52 @@ namespace MurmurBus { namespace IOCP {
 		virtual void TConnectEx::Connected(BOOL status, ISocketPtr socket) = 0;
 	}; // TConnectEx
 
+	///////////////////////
+	class TConnectExQueue {
+	private:
+		IIOCPEventedPtr iocp;
+	private:
+		TConnectExQueue::TConnectExQueue();
+	public:
+		TConnectExQueue(IIOCPEventedPtr iocp) : iocp(iocp), next_id(0) { }
+	private:
+		__int64 next_id;
+	private:
+		////////////////////////////////////////////
+		class TConnectExClient : public TConnectEx {
+		private:
+			__int64 id;
+		private:
+			TConnectExQueue *queue;
+		private:
+			TConnectExClient::TConnectExClient();
+		public:
+			TConnectExClient::TConnectExClient(__int64 id, IIOCPEventedPtr iocp, std::string intfc, std::string remote, short port, 
+				TConnectExQueue *queue) : 
+				id(id), queue(queue), TConnectEx(iocp, intfc, remote, port)
+			{
+				Verify(NULL != queue);
+				Verify(iocp);
+			}
+		private:
+			void TConnectEx::Connected(BOOL status, ISocketPtr socket) {
+				queue->Connected(status, socket);
+				queue->pending.erase(id);
+			}
+		}; // TConnectExClient
+		friend class TConnectExClient;
+		typedef std::shared_ptr<TConnectExClient> TConnectExClientPtr;
+	private:
+		std::hash_map<__int64, TConnectExClientPtr> pending;
+	public:
+		virtual void TConnectExQueue::Connected(BOOL status, ISocketPtr socket) = 0;
+	public:
+		void TConnectExQueue::Connect(std::string intfc, std::string remote, short port) {
+			next_id++;
+			pending[next_id] = TConnectExClientPtr(new TConnectExClient(next_id, iocp, intfc, remote, port, this));
+		}
+	};
+
 	///////////////////////////////////
 	class TSocketUdp : public TSocket {
 	public:
@@ -760,6 +806,29 @@ namespace MurmurBus { namespace IOCP {
 		bool TListener::Send(__int64 session_id, TMessage &message) {
 			return sessionManager->Send(session_id, message);
 		}
+	private:
+		/////////////////////////////////////////////////////
+		class TConnectExQueueLocal : public TConnectExQueue {
+		private:
+			TListener *listener;
+		private:
+			TConnectExQueueLocal::TConnectExQueueLocal();
+		public:
+			TConnectExQueueLocal::TConnectExQueueLocal(IIOCPEventedPtr iocp, TListener *listener) : 
+				TConnectExQueue(iocp), listener(listener) { }
+		private:
+			void TConnectExQueue::Connected(BOOL status, ISocketPtr socket) {
+				Verify(TRUE == status);
+				ISessionPtr session = listener->sessionManager->NewSession(socket);
+			}
+		} /*TConnectExQueueLocal*/ connect_queue;
+		friend class TConnectExQueueLocal;
+	public:
+		void TListener::Connect(std::string intfc, std::string remote, short port) {
+			connect_queue.Connect(intfc, remote, port);
+		}
+	private:
+		virtual void Connected(ISessionPtr session) = 0;
 	};
 	typedef std::shared_ptr<TListener> TListenerPtr;
 
