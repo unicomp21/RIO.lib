@@ -250,7 +250,7 @@ namespace MurmurBus {
 			ULONG_PTR completion_key = 0;
 			DWORD byte_count = 0;
 			BOOL status = ::GetQueuedCompletionStatus(
-				hIOCP, &byte_count, &completion_key, &lpOverlapped, INFINITE);
+				hIOCP, &byte_count, &completion_key, &lpOverlapped, 0);
 			TOverlapped *pOverlapped = reinterpret_cast<TOverlapped*>(lpOverlapped);
 			if(TRUE == status) {
 				Verify(NULL != pOverlapped->iCompletion);
@@ -262,7 +262,6 @@ namespace MurmurBus {
 					pOverlapped->iCompletion->Completed(status, byte_count, pOverlapped);
 					return true;
 				} else { //timeout
-					Verify(false);
 					return false;
 				}
 			}

@@ -839,6 +839,7 @@ namespace MurmurBus { namespace IOCP {
 			void TConnectExQueue::Connected(BOOL status, ISocketPtr socket) {
 				Verify(TRUE == status);
 				ISessionPtr session = listener->sessionManager->NewSession(socket);
+				listener->Connected(session);
 			}
 		} /*TConnectExQueueLocal*/ connect_queue;
 		friend class TConnectExQueueLocal;
@@ -847,7 +848,7 @@ namespace MurmurBus { namespace IOCP {
 			connect_queue.Connect(intfc, remote, port);
 		}
 	private:
-		virtual void Connected(ISessionPtr session) = 0;
+		virtual void TListener::Connected(ISessionPtr session) = 0;
 	};
 	typedef std::shared_ptr<TListener> TListenerPtr;
 
