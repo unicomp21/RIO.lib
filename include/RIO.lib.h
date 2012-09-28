@@ -742,6 +742,7 @@ namespace MurmurBus { namespace RIO {
 				rioSessionManager(rioSessionManager) { }
 		private:
 			void TAcceptEx::Accepted(BOOL status, ISocketPtr socket) {
+				std::cout << __FUNCTION__ << std::endl;
 				Verify(TRUE == status);
 				rioSessionManager->NewServerSession(socket);
 			}

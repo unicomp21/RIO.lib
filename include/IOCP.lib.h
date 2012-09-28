@@ -463,6 +463,7 @@ namespace MurmurBus { namespace IOCP {
 		void ICompletionResult::Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped) {
 			std::auto_ptr<TOverlappedListener> prev_overlapped_listener(
 				reinterpret_cast<TOverlappedListener*>(overlapped));
+			std::cout << "Accepted" << std::endl;
 			Accepted(status, prev_overlapped_listener->acceptee);
 			PostAccept();
 		}
@@ -547,6 +548,7 @@ namespace MurmurBus { namespace IOCP {
 			}
 		private:
 			void TConnectEx::Connected(BOOL status, ISocketPtr socket) {
+				std::cout << __FUNCTION__ << std::endl;
 				queue->Connected(status, socket);
 				queue->pending.erase(id);
 			}
@@ -755,6 +757,7 @@ namespace MurmurBus { namespace IOCP {
 			Verify(socket);
 			ISessionPtr session = ISessionPtr(new TSession(iocp, ++next_session_id, this, socket));
 			sessions[session->get_session_id()] = session;
+			std::cout << "NewSession: " << session->get_session_id() << std::endl;
 			return session;
 		}
 	private:
