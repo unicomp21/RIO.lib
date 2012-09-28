@@ -72,6 +72,11 @@ namespace MurmurBus {
 	public:
 		operator HANDLE() { return hEvent; }
 	public:
+		void WaitOne() {
+			DWORD wait = ::WaitForSingleObject(hEvent, INFINITE);
+			Verify(WAIT_OBJECT_0 == wait);
+		}
+	public:
 		~TEvent() {
 			BOOL check = ::CloseHandle(hEvent);
 			Verify(TRUE == check);
