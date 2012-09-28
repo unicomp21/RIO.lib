@@ -29,7 +29,11 @@ int _tmain(int argc, _TCHAR* argv[])
 	msg2.Dump(std::cout);
 
 	IIOCPEventedPtr iocp_evented = IIOCPEventedPtr(new TIOCPEvented());
-
+	TEchoTest echo_test(iocp_evented, "127.0.0.1", 333, 128);
+	for(;;) {
+		iocp_evented->completions_waiting().WaitOne();
+		iocp_evented->completion_port().Flush();
+	}
 
 	return 0;
 }

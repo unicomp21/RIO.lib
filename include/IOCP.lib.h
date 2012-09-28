@@ -5,11 +5,14 @@
 #include <vector>
 #include <sstream>
 #include <hash_map>
+#include <iostream>
 
 namespace MurmurBus { namespace IOCP {
 
 	////////////////
 	class ISession {
+	public:
+		virtual __int64 get_session_id() = 0;
 	public:
 		virtual void Send(TMessage &message) = 0;
 	}; // ISession
@@ -629,6 +632,8 @@ namespace MurmurBus { namespace IOCP {
 	class TSession : public ISession {
 	private:
 		__int64 session_id;
+	public:
+		__int64 get_session_id() { return session_id; }
 	private:
 		IProcessMessage *iSessionManager;
 	private:
@@ -739,6 +744,7 @@ namespace MurmurBus { namespace IOCP {
 		ISessionPtr ISessionManager::NewSession(ISocketPtr socket) {
 			Verify(socket);
 			ISessionPtr session = ISessionPtr(new TSession(++next_session_id, this, socket));
+			sessions[session->get_session_id()] = session;
 			return session;
 		}
 	private:
@@ -837,7 +843,7 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		TEchoTest();
 	public:
-		TEchoTest(IIOCPEventedPtr iocp, std::string intfc, short port, int depth, IProcessMessage *iProcessMessage) :
+		TEchoTest(IIOCPEventedPtr iocp, std::string intfc, short port, int depth) :
 			listener(iocp, intfc, port, depth, this) { }
 	private:
 		/////////////////////////////////////////
@@ -859,14 +865,27 @@ namespace MurmurBus { namespace IOCP {
 		private:
 			void TListener::Connected(ISessionPtr session) {
 				client_count++;
-				if(client_count < 1024)
+				if(client_count < 1024) // 1k echo clients
 					Connect(intfc, intfc, port);
-				//todo, session send msg
+
+				TMessage message;
+				message["command"] = "echo";
+				message["hops"] = "0";
+				session->Send(message);
 			}
 		} listener;
 	private:
 		void IProcessMessage::Process(__int64 session_id, TMessage &message) {
-			//todo
+			int hops = 0;
+			std::stringstream parser(message["hops"]);
+			parser >> hops;
+			hops++;
+			if(hops % 100)
+				std::cout << "session_id: " << session_id << ", " << hops << std::endl;
+			std::stringstream out;
+			out  << hops;
+			message["hops"] = hops;
+			listener.Send(session_id, message);
 		}
 	};
 
