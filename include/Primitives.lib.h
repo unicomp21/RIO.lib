@@ -209,15 +209,21 @@ namespace MurmurBus {
 	class TOverlapped : public OVERLAPPED {
 		friend class TIOCP;
 	public:
-		void Reset() { LPOVERLAPPED clear = this; memset(clear, 0, sizeof(OVERLAPPED)); }
+		void Reset() {
+			HANDLE hEvent = this->hEvent;
+			LPOVERLAPPED clear = this;
+			memset(clear, 0, sizeof(OVERLAPPED));
+			this->hEvent = hEvent;
+		}
 	private:
-		TOverlapped() : iCompletion(NULL) { NotImplemented(); }
+		TOverlapped();
 	private:
 		ICompletionResult *iCompletion;
 	public:
 		operator LPOVERLAPPED() { return this; }
 	public:
-		TOverlapped(ICompletionResult *iCompletion) : iCompletion(iCompletion) {
+		TOverlapped(ICompletionResult *iCompletion, HANDLE hEvent) : iCompletion(iCompletion) {
+			this->hEvent = hEvent;
 			Reset();
 		}
 	}; // TOverlapped
