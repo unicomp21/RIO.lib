@@ -256,25 +256,25 @@ namespace MurmurBus { namespace IOCP {
 				);
 		}
 	public:
-		BOOL Send(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) {
+		int Send(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) {
 			Verify(NULL != socket);
 			return ::WSASend(socket, lpBuffers, dwBufferCount, NULL, 0, lpOverlapped, NULL);
 		}
 	public:
-		BOOL Send(char *buffer, unsigned long len, LPOVERLAPPED lpOverlapped) {
+		int Send(char *buffer, unsigned long len, LPOVERLAPPED lpOverlapped) {
 			WSABUF wsaBuf;
 			wsaBuf.buf = buffer;
 			wsaBuf.len = len;
 			return Send(&wsaBuf, 1, lpOverlapped);
 		}
 	public:
-		BOOL Recv(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) {
+		int Recv(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) {
 			Verify(NULL != socket);
 			DWORD flags = 0;
 			return ::WSARecv(socket, lpBuffers, dwBufferCount, NULL, &flags, lpOverlapped, NULL);
 		}
 	public:
-		BOOL Recv(char *buffer, unsigned long len, LPOVERLAPPED lpOverlapped) {
+		int Recv(char *buffer, unsigned long len, LPOVERLAPPED lpOverlapped) {
 			WSABUF wsaBuf;
 			wsaBuf.buf = buffer;
 			wsaBuf.len = len;
@@ -299,6 +299,10 @@ namespace MurmurBus { namespace IOCP {
 				NULL, 0, flags);
 			Verify(INVALID_SOCKET != hSocket);
 			winsockExtensions = TWinsockExtensionsPtr(new TWinsockExtensions(hSocket));
+
+			BOOL val = TRUE;
+			int err = ::setsockopt(hSocket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char*>(&val), sizeof(val));
+			Verify(SOCKET_ERROR != err);
 		}
 	private:
 		BOOL ISocket::TransmitFile(HANDLE hFile, DWORD nNumberOfBytesToWrite,
@@ -355,13 +359,13 @@ namespace MurmurBus { namespace IOCP {
 				);
 		}
 	private:
-		BOOL ISocket::Send(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) {
+		int ISocket::Send(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) {
 			return winsockExtensions->Send(
 				lpBuffers, dwBufferCount, lpOverlapped
 				);
 		}
 	private:
-		BOOL ISocket::Recv(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) {
+		int ISocket::Recv(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) {
 			return winsockExtensions->Recv(
 				lpBuffers, dwBufferCount, lpOverlapped
 				);
@@ -459,12 +463,16 @@ namespace MurmurBus { namespace IOCP {
 				&overlapped_listener->byte_count, overlapped_listener);
 			if(FALSE == check)
 				Verify(ERROR_IO_PENDING == ::WSAGetLastError());
+			else
+				Verify(0 == overlapped_listener->byte_count);
 		}
 	private:
 		void ICompletionResult::Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped) {
 			std::auto_ptr<TOverlappedListener> prev_overlapped_listener(
 				reinterpret_cast<TOverlappedListener*>(overlapped));
 			//std::cout << "Accepted" << std::endl;
+			Verify(0 == byte_count);
+			iocp->completion_port().Attach(*prev_overlapped_listener->acceptee);
 			Accepted(status, prev_overlapped_listener->acceptee);
 			PostAccept();
 		}
@@ -685,7 +693,9 @@ namespace MurmurBus { namespace IOCP {
 				WSABUF wsaBuf;
 				wsaBuf.buf = &recv_buffer[0];
 				wsaBuf.len = static_cast<ULONG>(recv_buffer.size());
-				socket->Recv(&wsaBuf, 1, this);
+				int err = socket->Recv(&wsaBuf, 1, this);
+				if(SOCKET_ERROR == err)
+					Verify(ERROR_IO_PENDING == ::GetLastError());
 			}
 		private:
 			void ICompletionResult::Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped)
@@ -736,7 +746,9 @@ namespace MurmurBus { namespace IOCP {
 						WSABUF wsaBuf;
 						wsaBuf.buf = &send_buffer[0];
 						wsaBuf.len = static_cast<ULONG>(send_buffer.size());
-						socket->Send(&wsaBuf, 1, this);
+						int err = socket->Send(&wsaBuf, 1, this);
+						if(SOCKET_ERROR == err)
+							Verify(ERROR_IO_PENDING == ::GetLastError());
 						pending = true;
 					}
 				}
@@ -797,7 +809,7 @@ namespace MurmurBus { namespace IOCP {
 			Verify(socket);
 			ISessionPtr session = ISessionPtr(new TSession(iocp, ++next_session_id, this, socket));
 			sessions[session->get_session_id()] = session;
-			std::cout << "NewSession: " << session->get_session_id() << std::endl;
+			//if(session->get_session_id() % 100 == 0) std::cout << "NewSession: " << session->get_session_id() << std::endl;
 			return session;
 		}
 	private:
@@ -858,8 +870,7 @@ namespace MurmurBus { namespace IOCP {
 		} acceptor;
 	private:
 		void IProcessMessage::Process(__int64 session_id, TMessage &message) {
-			NotImplemented();
-			//todo, message processing
+			iProcessMessage->Process(session_id, message);
 		}
 	public:
 		bool TListener::Send(__int64 session_id, TMessage &message) {
@@ -919,8 +930,12 @@ namespace MurmurBus { namespace IOCP {
 		private:
 			void TListener::Connected(ISessionPtr session) {
 				client_count++;
-				if(client_count < 1024) // 1k echo clients
+				
+				if(client_count < 1024) {
 					Connect(intfc, intfc, port);
+					std::cout << "conected: " << session->get_session_id() << std::endl;
+				} else
+					std::cout << client_count << " echo sockets connected." << std::endl;
 
 				TMessage message;
 				message["command"] = "echo";
@@ -934,8 +949,7 @@ namespace MurmurBus { namespace IOCP {
 			std::stringstream parser(message["hops"]);
 			parser >> hops;
 			hops++;
-			if(hops % 100)
-				std::cout << "session_id: " << session_id << ", " << hops << std::endl;
+			//if(hops % 10000) std::cout << "session_id: " << session_id << ", " << hops << std::endl;
 			std::stringstream out;
 			out  << hops;
 			message["hops"] = hops;

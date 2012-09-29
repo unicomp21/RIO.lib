@@ -764,6 +764,7 @@ namespace MurmurBus { namespace RIO {
 			InitCompletionQueue(*listener);
 		}
 	private:
+		///////////////////////////////////////////////
 		class TRioSessionClientEx : public TConnectEx {
 		private:
 			TRioSessionClientEx() : TConnectEx(IIOCPEventedPtr(), "", NULL, NULL) { NotImplemented(); }
@@ -781,6 +782,7 @@ namespace MurmurBus { namespace RIO {
 			}
 		};
 		typedef std::shared_ptr<TRioSessionClientEx> TRioSessionClientExPtr;
+		////////////////////////////////////////////////////////////////////
 	private:
 		void NewClientSession(ISocketPtr socket) {
 			//todo
