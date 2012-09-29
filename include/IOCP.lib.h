@@ -713,7 +713,10 @@ namespace MurmurBus { namespace IOCP {
 		public:
 			TSessionSend::TSessionSend(ISocketPtr socket, TSession *session) : pending(false),
 				socket(socket), TOverlappedSend(this, session->iocp->completions_waiting()),
-				session(session), send_buffer(constants::max_msg_size, 0) { }
+				session(session)
+			{ 
+				send_buffer.reserve(constants::max_msg_size);
+			}
 		private:
 			std::queue<TMessage> message_queue;
 		private:
@@ -724,13 +727,18 @@ namespace MurmurBus { namespace IOCP {
 		private:
 			void Flush() {
 				if(false == pending) {
-					Verify(send_buffer.size() > 0);
-					Reset();
-					WSABUF wsaBuf;
-					wsaBuf.buf = &send_buffer[0];
-					wsaBuf.len = static_cast<ULONG>(send_buffer.size());
-					socket->Send(&wsaBuf, 1, this);
-					pending = true;
+					send_buffer.clear();
+					if(message_queue.size() > 0) {
+						TMessage message = message_queue.front();
+						message_queue.pop();
+						message.Append(send_buffer);
+						Reset();
+						WSABUF wsaBuf;
+						wsaBuf.buf = &send_buffer[0];
+						wsaBuf.len = static_cast<ULONG>(send_buffer.size());
+						socket->Send(&wsaBuf, 1, this);
+						pending = true;
+					}
 				}
 			}
 		private:
@@ -747,12 +755,10 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		TBytes message_builder;
 	private:
-		TMessage message;
-	private:
 		void TSession::ProcessMessage(TBytes &recv_buffer, DWORD byte_count) {
 			message_builder.insert(message_builder.end(), recv_buffer.begin(), recv_buffer.begin() + byte_count);
 			size_t end_offset = 0;
-			message.SoftClear();
+			TMessage message;
 			while(true == message.Read(message_builder, 0, &end_offset)) {
 				message_builder.erase(message_builder.begin(), message_builder.begin() + end_offset);
 				iSessionManager->Process(session_id, message);
