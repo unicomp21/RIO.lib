@@ -1,5 +1,9 @@
 #pragma once
 
+// disable warnings not found in v110 toolset (VS2012)
+#pragma warning(disable : 4355)
+#pragma warning(disable : 4482)
+
 #define WIN32_LEAN_AND_MEAN
 
 #include <winsock2.h>
