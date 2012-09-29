@@ -4,6 +4,7 @@
 #include <set>
 #include <hash_map>
 
+#ifdef RIO
 namespace MurmurBus { namespace RIO {
 	using namespace MurmurBus::IOCP;
 	//////////////////////////////////////
@@ -816,3 +817,4 @@ namespace MurmurBus { namespace RIO {
 	}; // TRioSessionManager
 } /* MurmurBus*/ } /* RIO */
 
+#endif
