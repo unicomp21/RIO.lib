@@ -767,10 +767,12 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		TBytes message_builder;
 	private:
+		TMessage message;
+	private:
 		void TSession::ProcessMessage(TBytes &recv_buffer, DWORD byte_count) {
 			message_builder.insert(message_builder.end(), recv_buffer.begin(), recv_buffer.begin() + byte_count);
 			size_t end_offset = 0;
-			TMessage message;
+			message.SoftClear();
 			while(true == message.Read(message_builder, 0, &end_offset)) {
 				message_builder.erase(message_builder.begin(), message_builder.begin() + end_offset);
 				iSessionManager->Process(session_id, message);
