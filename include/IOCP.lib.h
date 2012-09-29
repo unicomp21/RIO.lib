@@ -662,43 +662,28 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		ISocketPtr socket;
 	private:
-		/////////////////////////////////////////////
-		friend class TSessionRecv;
-		class TSessionRecv : public TOverlappedRecv {
+		////////////////////////////////////////////////////////////////////////
+		class TSessionRecv : private ICompletionResult, public TOverlappedRecv {
 		private:
 			TSession *session;
 		private:
 			ISocketPtr socket;
 		private:
 			TSessionRecv::TSessionRecv();
-		private:
-			//////////////////////////////////////////////////
-			class TRecvCompletion : public ICompletionResult {
-			private:
-				TSessionRecv *sessionRecv;
-			private:
-				TRecvCompletion::TRecvCompletion();
-			public:
-				TRecvCompletion::TRecvCompletion(TSessionRecv *sessionRecv) : sessionRecv(sessionRecv) {
-					Verify(NULL != sessionRecv);
-				}
-			private:
-				void ICompletionResult::Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped)
-				{
-					Verify(TRUE == status); //todo
-					sessionRecv->ProcessMessage(byte_count);
-				}
-			} /* TRecvCompletion */ recvCompletion;
 		public:
 			TSessionRecv::TSessionRecv(ISocketPtr socket, TSession *session) : 
-				socket(socket), TOverlappedRecv(&recvCompletion, session->iocp->completions_waiting()),
-				session(session), recvCompletion(this)
-			{ }
+				socket(socket), TOverlappedRecv(this, session->iocp->completions_waiting()),
+				session(session) { }
 		private:
-			void TSessionRecv::ProcessMessage(DWORD byte_count) {
+			void ICompletionResult::Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped)
+			{
+				Verify(TRUE == status); //todo
 				session->ProcessMessage(byte_count);
 			}
-		} /* TSessionRecv */ recv_loop;
+		} recv_loop;
+		typedef std::shared_ptr<TSessionRecv> TSessionRecvPtr;
+		friend class TSessionRecv;
+		//////////////////////////
 	private:
 		std::vector<char> recv_buffer;
 	private:
