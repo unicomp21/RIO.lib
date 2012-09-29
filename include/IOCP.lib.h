@@ -652,18 +652,21 @@ namespace MurmurBus { namespace IOCP {
 	public:
 		TSession::TSession(IIOCPEventedPtr iocp, __int64 session_id, ISessionManager *iSessionManager, ISocketPtr socket) :
 			iocp(iocp), session_id(session_id), iSessionManager(iSessionManager), socket(socket),
-			recv_loop(socket, this), recv_buffer(constants::max_msg_size, 0)
+			recv_loop(socket, this)
 		{
 			Verify(iocp);
 			Verify(NULL != iSessionManager);
 			Verify(socket);
-			PostRecv();
+			recv_loop.PostRecv();
 		}
 	private:
 		ISocketPtr socket;
 	private:
 		////////////////////////////////////////////////////////////////////////
 		class TSessionRecv : private ICompletionResult, public TOverlappedRecv {
+			friend class TSession;
+		private:
+			TBytes recv_buffer;
 		private:
 			TSession *session;
 		private:
@@ -673,25 +676,32 @@ namespace MurmurBus { namespace IOCP {
 		public:
 			TSessionRecv::TSessionRecv(ISocketPtr socket, TSession *session) : 
 				socket(socket), TOverlappedRecv(this, session->iocp->completions_waiting()),
-				session(session) { }
+				session(session), recv_buffer(constants::max_msg_size, 0) { }
+		private:
+			void TSessionRecv::PostRecv() {
+				Verify(recv_buffer.size() > 0);
+				Reset();
+				WSABUF wsaBuf;
+				wsaBuf.buf = &recv_buffer[0];
+				wsaBuf.len = static_cast<ULONG>(recv_buffer.size());
+				socket->Recv(&wsaBuf, 1, this);
+			}
 		private:
 			void ICompletionResult::Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped)
 			{
 				Verify(TRUE == status); //todo
-				session->ProcessMessage(byte_count);
+				session->ProcessMessage(recv_buffer, byte_count);
 			}
 		} recv_loop;
 		typedef std::shared_ptr<TSessionRecv> TSessionRecvPtr;
 		friend class TSessionRecv;
 		//////////////////////////
 	private:
-		TBytes recv_buffer;
-	private:
 		TBytes message_builder;
 	private:
 		TMessage message;
 	private:
-		void TSession::ProcessMessage(DWORD byte_count) {
+		void TSession::ProcessMessage(TBytes &recv_buffer, DWORD byte_count) {
 			message_builder.insert(message_builder.end(), recv_buffer.begin(), recv_buffer.begin() + byte_count);
 			size_t end_offset = 0;
 			message.SoftClear();
@@ -701,16 +711,7 @@ namespace MurmurBus { namespace IOCP {
 				end_offset = 0;
 				message.SoftClear();
 			}
-			PostRecv();
-		}
-	private:
-		void TSession::PostRecv() {
-			Verify(recv_buffer.size() > 0);
-			recv_loop.Reset();
-			WSABUF wsaBuf;
-			wsaBuf.buf = &recv_buffer[0];
-			wsaBuf.len = static_cast<ULONG>(recv_buffer.size());
-			socket->Recv(&wsaBuf, 1, recv_loop);
+			recv_loop.PostRecv();
 		}
 	private:
 		void ISession::Send(TMessage &message) {
