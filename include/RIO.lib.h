@@ -272,7 +272,7 @@ namespace MurmurBus { namespace RIO {
 	private:
 		TRioExtensions rio_extensions;
 	private:
-		std::vector<CHAR> parent_buffer;
+		TBytes parent_buffer;
 	private:
 		struct TBlockHeader {
 			__int64 seqno;
@@ -308,7 +308,7 @@ namespace MurmurBus { namespace RIO {
 	public:
 		DWORD get_block_size() { return block_size; }
 	public:
-		bool WriteMessage(__int64 topic, std::vector<char> &write_buffer) {
+		bool WriteMessage(__int64 topic, TBytes &write_buffer) {
 			if(write_buffer.size() < max_payload_size) {
 				TBlockHeader *header = reinterpret_cast<TBlockHeader*>
 					(&parent_buffer[(next_seqno % block_count) * block_size]);
@@ -326,7 +326,7 @@ namespace MurmurBus { namespace RIO {
 			}
 		}
 	public:
-		bool ReadMessage(__int64 &seqno, __int64 topic, std::vector<char> &read_buffer) {
+		bool ReadMessage(__int64 &seqno, __int64 topic, TBytes &read_buffer) {
 			Verify(seqno >= 0);
 			if((next_seqno - seqno) >= block_count) {
 				Verify(false);
@@ -383,7 +383,7 @@ namespace MurmurBus { namespace RIO {
 	private:
 		TRioExtensions rio_extensions;
 	private:
-		std::vector<CHAR> parent_buffer;
+		TBytes parent_buffer;
 	private:
 		RIO_BUFFERID bufferid;
 	public:

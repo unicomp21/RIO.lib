@@ -409,7 +409,7 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		class TOverlappedListener : public TOverlapped {
 		public:
-			std::vector<char> addresses_buffer;
+			TBytes addresses_buffer;
 		public:
 			enum { address_reserve = sizeof(SOCKADDR_IN) + 16 };
 		public:
@@ -582,7 +582,7 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		__int64 next_seqno;
 	private:
-		std::vector<char> parent_buffer;
+		TBytes parent_buffer;
 	private:
 		TRingBufferManager::TRingBufferManager();
 	public:
@@ -599,7 +599,7 @@ namespace MurmurBus { namespace IOCP {
 	public:
 		DWORD TRingBufferManager::get_block_size() { return block_size; }
 	public:
-		bool TRingBufferManager::WriteMessage(DWORD topic, std::vector<char> &write_buffer) {
+		bool TRingBufferManager::WriteMessage(DWORD topic, TBytes &write_buffer) {
 			DWORD max_payload = block_size - sizeof(TBlock);
 			if(parent_buffer.size() >= max_payload) {
 				Verify(false);
@@ -612,7 +612,7 @@ namespace MurmurBus { namespace IOCP {
 			}
 		}
 	public:
-		bool TRingBufferManager::ReadMessage(__int64 &start_seqno, DWORD topic, std::vector<char> &read_buffer) {
+		bool TRingBufferManager::ReadMessage(__int64 &start_seqno, DWORD topic, TBytes &read_buffer) {
 			for(; start_seqno < next_seqno; start_seqno++) {
 				DWORD mod_block_count = static_cast<DWORD>(next_seqno % block_count);
 				TBlock *block = reinterpret_cast<TBlock*>(&parent_buffer[mod_block_count * block_size]);
@@ -685,9 +685,9 @@ namespace MurmurBus { namespace IOCP {
 		friend class TSessionRecv;
 		//////////////////////////
 	private:
-		std::vector<char> recv_buffer;
+		TBytes recv_buffer;
 	private:
-		std::vector<char> message_builder;
+		TBytes message_builder;
 	private:
 		TMessage message;
 	private:

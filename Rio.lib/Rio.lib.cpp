@@ -20,7 +20,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	msg["arg2"] = "val2";
 	msg.Dump(std::cout);
 
-	std::vector<char> buffer;
+	TBytes buffer;
 	msg.Append(buffer);
 
 	TMessage msg2;
