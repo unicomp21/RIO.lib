@@ -951,7 +951,7 @@ namespace MurmurBus { namespace IOCP {
 			std::stringstream parser(message["hops"]);
 			parser >> hops;
 			hops++;
-			//if(hops % 10000) std::cout << "session_id: " << session_id << ", " << hops << std::endl;
+			//if(hops % 100) std::cout << "session_id: " << session_id << ", hops: " << hops << std::endl;
 			std::stringstream out;
 			out  << hops;
 			message["hops"] = hops;
