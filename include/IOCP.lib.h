@@ -3,6 +3,7 @@
 #include "Primitives.lib.h"
 #include <stdio.h>
 #include <vector>
+#include <queue>
 #include <sstream>
 #include <hash_map>
 #include <iostream>
@@ -652,7 +653,7 @@ namespace MurmurBus { namespace IOCP {
 	public:
 		TSession::TSession(IIOCPEventedPtr iocp, __int64 session_id, ISessionManager *iSessionManager, ISocketPtr socket) :
 			iocp(iocp), session_id(session_id), iSessionManager(iSessionManager), socket(socket),
-			recv_loop(socket, this)
+			recv_loop(socket, this), send_queue(socket, this)
 		{
 			Verify(iocp);
 			Verify(NULL != iSessionManager);
@@ -697,6 +698,53 @@ namespace MurmurBus { namespace IOCP {
 		friend class TSessionRecv;
 		//////////////////////////
 	private:
+		class TSessionSend : private ICompletionResult, public TOverlappedSend {
+			friend class TSession;
+		private:
+			TBytes send_buffer;
+		private:
+			TSession *session;
+		private:
+			ISocketPtr socket;
+		private:
+			bool pending;
+		private:
+			TSessionSend::TSessionSend();
+		public:
+			TSessionSend::TSessionSend(ISocketPtr socket, TSession *session) : pending(false),
+				socket(socket), TOverlappedSend(this, session->iocp->completions_waiting()),
+				session(session), send_buffer(constants::max_msg_size, 0) { }
+		private:
+			std::queue<TMessage> message_queue;
+		private:
+			void Send(TMessage &message) {
+				message_queue.push(message);
+				Flush();
+			}
+		private:
+			void Flush() {
+				if(false == pending) {
+					Verify(send_buffer.size() > 0);
+					Reset();
+					WSABUF wsaBuf;
+					wsaBuf.buf = &send_buffer[0];
+					wsaBuf.len = static_cast<ULONG>(send_buffer.size());
+					socket->Send(&wsaBuf, 1, this);
+					pending = true;
+				}
+			}
+		private:
+			void ICompletionResult::Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped)
+			{
+				Verify(TRUE == status); //todo
+				pending = false;
+				Flush();
+			}
+		} send_queue;
+		typedef std::shared_ptr<TSessionSend> TSessionSendPtr;
+		friend class TSessionSend;
+		//////////////////////////
+	private:
 		TBytes message_builder;
 	private:
 		TMessage message;
@@ -715,7 +763,7 @@ namespace MurmurBus { namespace IOCP {
 		}
 	private:
 		void ISession::Send(TMessage &message) {
-			NotImplemented(); //todo
+			send_queue.Send(message);
 		}
 	}; // TSession
 
