@@ -578,7 +578,7 @@ namespace MurmurBus { namespace IOCP {
 		public:
 			TConnectExClient::TConnectExClient(__int64 id, IIOCPEventedPtr iocp, std::string intfc, std::string remote, short port, 
 				TConnectExQueue *queue) : 
-				id(id), queue(queue), TConnectEx(iocp, intfc, remote, port)
+			id(id), queue(queue), TConnectEx(iocp, intfc, remote, port)
 			{
 				Verify(NULL != queue);
 				Verify(iocp);
@@ -986,18 +986,26 @@ namespace MurmurBus { namespace IOCP {
 	};
 	typedef std::shared_ptr<TListenConnect> TListenConnectPtr;
 
-	//////////////////////////
-	class ISubscribeCallback {
-	public:
-		virtual void Update(std::string topic, TMessage &message) = 0;
-	};
-
 	///////////////
 	class IPubSub {
 	public:
+		//////////////////////////
+		class ISubscribeCallback {
+		public:
+			virtual void Update(std::string topic, TMessage &message) = 0;
+		};
+	public:
+		////////////////////////
+		class IConnectCallback {
+		public:
+			virtual void Connected() = 0;
+		};
+	public:
 		virtual void Listen(std::string intfc, short port) = 0;
 	public:
-		virtual void Connect(std::string intfc, std::string remote, short port) = 0;
+		virtual void Connect(
+			std::string intfc, std::string remote, short port, 
+			IConnectCallback *iConnectCallback) = 0;
 	public:
 		virtual void Publish(std::string topic, TMessage &message) = 0;
 	public:
@@ -1009,7 +1017,9 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		TPubSub();
 	public:
-		TPubSub(IIOCPEventedPtr iocp) : session_id(0), TListenConnect(iocp, this) {
+		TPubSub(IIOCPEventedPtr iocp) : session_id(0), 
+			TListenConnect(iocp, this), iConnectCallback(NULL)
+		{
 			payload.reserve(128);
 		}
 	private:
@@ -1019,8 +1029,14 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		TOneShot oneshot_connect;
 	private:
-		void IPubSub::Connect(std::string intfc, std::string remote, short port) {
+		IPubSub::IConnectCallback *iConnectCallback;
+	private:
+		void IPubSub::Connect(
+			std::string intfc, std::string remote, short port,
+			IConnectCallback *iConnectCallback) 
+		{
 			Verify(oneshot_connect);
+			this->iConnectCallback = iConnectCallback;
 			TListenConnect::Connect(intfc, remote, port);
 		}
 	private:
@@ -1041,7 +1057,10 @@ namespace MurmurBus { namespace IOCP {
 			TListenConnect::Send(session_id, envelope);
 		}
 	private:
-		void IPubSub::Subscribe(std::string topic, ISubscribeCallback *iSubscribeCallback) {
+		void IPubSub::Subscribe(
+			std::string topic, IPubSub::ISubscribeCallback *iSubscribeCallback
+			) 
+		{
 			Verify(NULL != iSubscribeCallback);
 			Verify(0 != session_id);
 			envelope.SoftClear();
@@ -1055,14 +1074,24 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		std::string command;
 	private:
+		std::string topic;
+	private:
 		void IProcessMessage::Process(__int64 session_id, TMessage &message) {
-			if(message.TryGet(std::string("command"), command)) {
+			if(
+				message.TryGet(std::string("command"), command) &&
+				message.TryGet(std::string("topic"), topic)
+				) 
+			{
 				if(command == "publish") {
-					//todo
+					auto iter = subscribers.find("topic");
+					if(iter != subscribers.end()) {
+						TListenConnect::Send(iter->second, message);
+					} else Verify(false);
 				} else if(command == "subscribe") {
-					//todo
+					Verify(subscribers.find(topic) == subscribers.end());
+					subscribers[topic] = session_id;
 				} else Verify(false);
-			}
+			} else Verify(false);
 		}
 	private:
 		void TListenConnect::Connected(ISessionPtr session) {
