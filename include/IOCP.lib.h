@@ -840,11 +840,26 @@ namespace MurmurBus { namespace IOCP {
 	public:
 		TListenConnect::TListenConnect(
 			IIOCPEventedPtr iocp, std::string intfc, short port, int depth, IProcessMessage *iProcessMessage) : 
-			iocp(iocp), acceptor(iocp, intfc, port, depth, this), iProcessMessage(iProcessMessage), connect_queue(iocp, this)
+			iocp(iocp), listen_id(0), iProcessMessage(iProcessMessage), connect_queue(iocp, this)
 		{
 			Verify(NULL != iProcessMessage);
 			Verify(iocp);
 			sessionManager = ISessionManagerPtr(new TSessionManager(this, iocp));
+		}
+	public:
+		__int64 /*listen_id*/ Listen(std::string intfc, short port, int accept_depth) {
+			++listen_id;
+			acceptors[listen_id] = TListenAcceptPtr(
+				new TListenAccept(iocp, intfc, port, accept_depth, this));
+			return listen_id;
+		}
+	public:
+		bool UnListen(__int64 remove_listen_id) {
+			if(acceptors.find(remove_listen_id) != acceptors.end()) {
+				acceptors.erase(remove_listen_id);
+				return true;
+			}
+			return false;
 		}
 	private:
 		ISessionManagerPtr sessionManager;
@@ -869,7 +884,11 @@ namespace MurmurBus { namespace IOCP {
 				Verify(TRUE == status);
 				listener->sessionManager->NewSession(socket);
 			}
-		} acceptor;
+		};
+		typedef std::shared_ptr<TListenAccept> TListenAcceptPtr;
+		std::hash_map<__int64, TListenAcceptPtr> acceptors;
+	private:
+		__int64 listen_id;
 	private:
 		void IProcessMessage::Process(__int64 session_id, TMessage &message) {
 			iProcessMessage->Process(session_id, message);
@@ -924,9 +943,10 @@ namespace MurmurBus { namespace IOCP {
 		private:
 			TListenConnectLocal::TListenConnectLocal();
 		public:
-			TListenConnectLocal(IIOCPEventedPtr iocp, std::string intfc, short port, int depth, IProcessMessage *iProcessMessage) :
-				TListenConnect(iocp, intfc, port, depth, iProcessMessage), intfc(intfc), port(port), client_count(0)
+			TListenConnectLocal(IIOCPEventedPtr iocp, std::string intfc, short port, int accept_depth, IProcessMessage *iProcessMessage) :
+				TListenConnect(iocp, intfc, port, accept_depth, iProcessMessage), intfc(intfc), port(port), client_count(0)
 			{
+				Listen(intfc, port, accept_depth);
 				Connect(intfc, intfc, port);
 			}
 		private:
