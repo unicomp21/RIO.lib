@@ -879,8 +879,7 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		TListenConnect::TListenConnect();
 	public:
-		TListenConnect::TListenConnect(
-			IIOCPEventedPtr iocp, std::string intfc, short port, int depth, IProcessMessage *iProcessMessage) : 
+		TListenConnect::TListenConnect(IIOCPEventedPtr iocp, IProcessMessage *iProcessMessage) : 
 			iocp(iocp), listen_id(0), iProcessMessage(iProcessMessage), connect_queue(iocp, this)
 		{
 			Verify(NULL != iProcessMessage);
@@ -994,7 +993,7 @@ namespace MurmurBus { namespace IOCP {
 			TListenConnectEcho::TListenConnectEcho();
 		public:
 			TListenConnectEcho(IIOCPEventedPtr iocp, std::string intfc, short port, int accept_depth, IProcessMessage *iProcessMessage) :
-				TListenConnect(iocp, intfc, port, accept_depth, iProcessMessage), intfc(intfc), port(port), client_count(0)
+				TListenConnect(iocp, iProcessMessage), intfc(intfc), port(port), client_count(0)
 			{
 				Listen(intfc, port, accept_depth);
 				Connect(intfc, intfc, port);
