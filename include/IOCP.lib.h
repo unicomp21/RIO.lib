@@ -831,14 +831,14 @@ namespace MurmurBus { namespace IOCP {
 	}; // TSessionManager
 
 	//////////////////////////////////////////
-	class TListener : public IProcessMessage {
+	class TListenConnect : public IProcessMessage {
 		friend class TListenAccept;
 	private:
 		IProcessMessage *iProcessMessage;
 	private:
-		TListener::TListener();
+		TListenConnect::TListenConnect();
 	public:
-		TListener::TListener(
+		TListenConnect::TListenConnect(
 			IIOCPEventedPtr iocp, std::string intfc, short port, int depth, IProcessMessage *iProcessMessage) : 
 			iocp(iocp), acceptor(iocp, intfc, port, depth, this), iProcessMessage(iProcessMessage), connect_queue(iocp, this)
 		{
@@ -853,13 +853,13 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		////////////////////////////////////////
 		class TListenAccept : public TAcceptEx {
-			friend class TListener;
+			friend class TListenConnect;
 		private:
-			TListener *listener;
+			TListenConnect *listener;
 		private:
 			TListenAccept::TListenAccept();
 		private:
-			TListenAccept(IIOCPEventedPtr iocp, std::string intfc, short port, int depth, TListener *listener) :
+			TListenAccept(IIOCPEventedPtr iocp, std::string intfc, short port, int depth, TListenConnect *listener) :
 				TAcceptEx(iocp, intfc, port, depth), listener(listener)
 			{ 
 				Verify(NULL != listener);
@@ -875,18 +875,18 @@ namespace MurmurBus { namespace IOCP {
 			iProcessMessage->Process(session_id, message);
 		}
 	public:
-		bool TListener::Send(__int64 session_id, TMessage &message) {
+		bool TListenConnect::Send(__int64 session_id, TMessage &message) {
 			return sessionManager->Send(session_id, message);
 		}
 	private:
 		/////////////////////////////////////////////////////
 		class TConnectExQueueLocal : public TConnectExQueue {
 		private:
-			TListener *listener;
+			TListenConnect *listener;
 		private:
 			TConnectExQueueLocal::TConnectExQueueLocal();
 		public:
-			TConnectExQueueLocal::TConnectExQueueLocal(IIOCPEventedPtr iocp, TListener *listener) : 
+			TConnectExQueueLocal::TConnectExQueueLocal(IIOCPEventedPtr iocp, TListenConnect *listener) : 
 				TConnectExQueue(iocp), listener(listener) { }
 		private:
 			void TConnectExQueue::Connected(BOOL status, ISocketPtr socket) {
@@ -897,13 +897,13 @@ namespace MurmurBus { namespace IOCP {
 		} /*TConnectExQueueLocal*/ connect_queue;
 		friend class TConnectExQueueLocal;
 	public:
-		void TListener::Connect(std::string intfc, std::string remote, short port) {
+		void TListenConnect::Connect(std::string intfc, std::string remote, short port) {
 			connect_queue.Connect(intfc, remote, port);
 		}
 	private:
-		virtual void TListener::Connected(ISessionPtr session) = 0;
+		virtual void TListenConnect::Connected(ISessionPtr session) = 0;
 	};
-	typedef std::shared_ptr<TListener> TListenerPtr;
+	typedef std::shared_ptr<TListenConnect> TListenConnectPtr;
 
 	//////////////////////////////////////////
 	class TEchoTest : public IProcessMessage {
@@ -914,7 +914,7 @@ namespace MurmurBus { namespace IOCP {
 			listener(iocp, intfc, port, depth, this) { }
 	private:
 		/////////////////////////////////////////
-		class TListenerLocal : public TListener {
+		class TListenConnectLocal : public TListenConnect {
 		private:
 			std::string intfc;
 		private:
@@ -922,15 +922,15 @@ namespace MurmurBus { namespace IOCP {
 		private:
 			int client_count;
 		private:
-			TListenerLocal::TListenerLocal();
+			TListenConnectLocal::TListenConnectLocal();
 		public:
-			TListenerLocal(IIOCPEventedPtr iocp, std::string intfc, short port, int depth, IProcessMessage *iProcessMessage) :
-				TListener(iocp, intfc, port, depth, iProcessMessage), intfc(intfc), port(port), client_count(0)
+			TListenConnectLocal(IIOCPEventedPtr iocp, std::string intfc, short port, int depth, IProcessMessage *iProcessMessage) :
+				TListenConnect(iocp, intfc, port, depth, iProcessMessage), intfc(intfc), port(port), client_count(0)
 			{
 				Connect(intfc, intfc, port);
 			}
 		private:
-			void TListener::Connected(ISessionPtr session) {
+			void TListenConnect::Connected(ISessionPtr session) {
 				client_count++;
 				
 				if(client_count < 1024) {
