@@ -24,8 +24,9 @@
 namespace MurmurBus {
 	////////////////////////////////
 	inline void Verify(bool check) {
+		DWORD last_err = ::GetLastError();
 		if(!check)
-			::DebugBreak();
+			::__debugbreak();
 	}
 
 	//////////////////////////////
