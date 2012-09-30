@@ -946,13 +946,16 @@ namespace MurmurBus { namespace IOCP {
 			}
 		} listener;
 	private:
+		std::stringstream parser;
+	private:
+		std::stringstream out;
+	private:
 		void IProcessMessage::Process(__int64 session_id, TMessage &message) {
 			int hops = 0;
-			std::stringstream parser(message["hops"]);
+			parser.str(message["hops"]);
 			parser >> hops;
 			hops++;
-			//if(hops % 100) std::cout << "session_id: " << session_id << ", hops: " << hops << std::endl;
-			std::stringstream out;
+			out.str("");
 			out  << hops;
 			message["hops"] = hops;
 			listener.Send(session_id, message);
