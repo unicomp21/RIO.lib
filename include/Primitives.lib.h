@@ -338,6 +338,10 @@ namespace MurmurBus {
 	public:
 		virtual int Recv(LPWSABUF lpBuffers, DWORD dwBufferCount, LPOVERLAPPED lpOverlapped) = 0;
 	public:
+		virtual std::string get_name() = 0;
+	public:
+		virtual std::string get_peername() = 0;
+	public:
 		virtual ~ISocket() { }
 	}; // ISocket
 

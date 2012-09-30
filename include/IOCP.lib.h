@@ -16,6 +16,8 @@ namespace MurmurBus { namespace IOCP {
 		virtual __int64 get_session_id() = 0;
 	public:
 		virtual void Send(TMessage &message) = 0;
+	public:
+		virtual std::string Description() = 0;
 	}; // ISession
 	typedef std::shared_ptr<ISession> ISessionPtr;
 
@@ -371,6 +373,28 @@ namespace MurmurBus { namespace IOCP {
 				);
 		}
 	private:
+		std::string ISocket::get_name() {
+			SOCKADDR_IN name;
+			memset(&name, 0, sizeof(name));
+			int len = sizeof(name);
+			int err = ::getsockname(hSocket, reinterpret_cast<LPSOCKADDR>(&name), &len);
+			Verify(err != SOCKET_ERROR);
+			std::stringstream out;
+			out << ::inet_ntoa(name.sin_addr) << ":" << ::htons(name.sin_port);
+			return out.str();
+		}
+	private:
+		std::string ISocket::get_peername() {
+			SOCKADDR_IN name;
+			memset(&name, 0, sizeof(name));
+			int len = sizeof(name);
+			int err = ::getpeername(hSocket, reinterpret_cast<LPSOCKADDR>(&name), &len);
+			Verify(err != SOCKET_ERROR);
+			std::stringstream out;
+			out << ::inet_ntoa(name.sin_addr) << ":" << ::htons(name.sin_port);
+			return out.str();
+		}
+	private:
 		ISocket::operator HANDLE() { return reinterpret_cast<HANDLE>(hSocket); }
 	private:
 		ISocket::operator SOCKET() { return hSocket; }
@@ -432,6 +456,8 @@ namespace MurmurBus { namespace IOCP {
 		};
 	private:
 		ISocketPtr acceptor;
+	public:
+		ISocketPtr get_acceptor() { return acceptor; }
 	private:
 		IIOCPEventedPtr iocp;
 	public:
@@ -785,6 +811,12 @@ namespace MurmurBus { namespace IOCP {
 		void ISession::Send(TMessage &message) {
 			send_queue.Send(message);
 		}
+	private:
+		std::string ISession::Description() {
+			std::stringstream out;
+			out << "local: " << socket->get_name() << ", remote: " << socket->get_peername();
+			return out.str();
+		}
 	}; // TSession
 
 	////////////////////////////////////////////////
@@ -874,14 +906,20 @@ namespace MurmurBus { namespace IOCP {
 		private:
 			TListenAccept::TListenAccept();
 		private:
-			TListenAccept(IIOCPEventedPtr iocp, std::string intfc, short port, int depth, TListenConnect *listener) :
-				TAcceptEx(iocp, intfc, port, depth), listener(listener)
+			TListenAccept(
+				IIOCPEventedPtr iocp, std::string intfc, short port, 
+				int depth, TListenConnect *listener
+				) :	TAcceptEx(iocp, intfc, port, depth), listener(listener)
 			{ 
 				Verify(NULL != listener);
 			}
 		private:
 			void TAcceptEx::Accepted(BOOL status, ISocketPtr socket) {
 				Verify(TRUE == status);
+				SOCKET val = *get_acceptor();
+				int err = setsockopt(*socket, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, 
+					reinterpret_cast<char*>(&val), sizeof(val));
+				Verify(SOCKET_ERROR != err);
 				listener->sessionManager->NewSession(socket);
 			}
 		};
@@ -910,6 +948,8 @@ namespace MurmurBus { namespace IOCP {
 		private:
 			void TConnectExQueue::Connected(BOOL status, ISocketPtr socket) {
 				Verify(TRUE == status);
+				int err = setsockopt(*socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
+				Verify(SOCKET_ERROR != err);
 				ISessionPtr session = listener->sessionManager->NewSession(socket);
 				listener->Connected(session);
 			}
@@ -932,7 +972,7 @@ namespace MurmurBus { namespace IOCP {
 		TEchoTest(IIOCPEventedPtr iocp, std::string intfc, short port, int depth) :
 			listener(iocp, intfc, port, depth, this) { }
 	private:
-		/////////////////////////////////////////
+		///////////////////////////////////////////////////
 		class TListenConnectLocal : public TListenConnect {
 		private:
 			std::string intfc;
@@ -955,7 +995,8 @@ namespace MurmurBus { namespace IOCP {
 				
 				if(client_count < 1024) {
 					Connect(intfc, intfc, port);
-					std::cout << "conected: " << session->get_session_id() << std::endl;
+					std::cout << "conected: " << session->get_session_id() << ", " <<
+						session->Description() << std::endl;
 				} else
 					std::cout << client_count << " echo sockets connected." << std::endl;
 
