@@ -973,7 +973,7 @@ namespace MurmurBus { namespace IOCP {
 			listener(iocp, intfc, port, depth, this) { }
 	private:
 		///////////////////////////////////////////////////
-		class TListenConnectLocal : public TListenConnect {
+		class TListenConnectEcho : public TListenConnect {
 		private:
 			std::string intfc;
 		private:
@@ -981,9 +981,9 @@ namespace MurmurBus { namespace IOCP {
 		private:
 			int client_count;
 		private:
-			TListenConnectLocal::TListenConnectLocal();
+			TListenConnectEcho::TListenConnectEcho();
 		public:
-			TListenConnectLocal(IIOCPEventedPtr iocp, std::string intfc, short port, int accept_depth, IProcessMessage *iProcessMessage) :
+			TListenConnectEcho(IIOCPEventedPtr iocp, std::string intfc, short port, int accept_depth, IProcessMessage *iProcessMessage) :
 				TListenConnect(iocp, intfc, port, accept_depth, iProcessMessage), intfc(intfc), port(port), client_count(0)
 			{
 				Listen(intfc, port, accept_depth);
