@@ -17,6 +17,8 @@ namespace MurmurBus { namespace IOCP {
 	public:
 		virtual void Send(TMessage &message) = 0;
 	public:
+		virtual bool IsServerSession() = 0;
+	public:
 		virtual std::string Description() = 0;
 	}; // ISession
 	typedef std::shared_ptr<ISession> ISessionPtr;
@@ -24,7 +26,7 @@ namespace MurmurBus { namespace IOCP {
 	///////////////////////
 	class ISessionManager {
 	public:
-		virtual ISessionPtr NewSession(ISocketPtr socket) = 0;
+		virtual ISessionPtr NewSession(bool isServerSession, ISocketPtr socket) = 0;
 	public:
 		virtual bool Send(__int64 session_id, TMessage &message) = 0;
 	public:
@@ -683,10 +685,15 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		IIOCPEventedPtr iocp;
 	private:
+		bool isServerSession;
+	private:
 		TSession::TSession();
 	public:
-		TSession::TSession(IIOCPEventedPtr iocp, __int64 session_id, ISessionManager *iSessionManager, ISocketPtr socket) :
-			iocp(iocp), session_id(session_id), iSessionManager(iSessionManager), socket(socket),
+		TSession::TSession(
+			bool isServerSession, IIOCPEventedPtr iocp, __int64 session_id,
+			ISessionManager *iSessionManager, ISocketPtr socket
+			) : isServerSession(isServerSession), iocp(iocp), session_id(session_id),
+			iSessionManager(iSessionManager), socket(socket),
 			recv_loop(socket, this), send_queue(socket, this)
 		{
 			Verify(iocp);
@@ -696,6 +703,8 @@ namespace MurmurBus { namespace IOCP {
 		}
 	private:
 		ISocketPtr socket;
+	private:
+		bool ISession::IsServerSession() { return isServerSession; }
 	private:
 		////////////////////////////////////////////////////////////////////////
 		class TSessionRecv : private ICompletionResult, public TOverlappedRecv {
@@ -839,9 +848,9 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		__int64 next_session_id;
 	private:
-		ISessionPtr ISessionManager::NewSession(ISocketPtr socket) {
+		ISessionPtr ISessionManager::NewSession(bool isServerSession, ISocketPtr socket) {
 			Verify(socket);
-			ISessionPtr session = ISessionPtr(new TSession(iocp, ++next_session_id, this, socket));
+			ISessionPtr session = ISessionPtr(new TSession(isServerSession, iocp, ++next_session_id, this, socket));
 			sessions[session->get_session_id()] = session;
 			//if(session->get_session_id() % 100 == 0) std::cout << "NewSession: " << session->get_session_id() << std::endl;
 			return session;
@@ -920,7 +929,8 @@ namespace MurmurBus { namespace IOCP {
 				int err = setsockopt(*socket, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, 
 					reinterpret_cast<char*>(&val), sizeof(val));
 				Verify(SOCKET_ERROR != err);
-				listener->sessionManager->NewSession(socket);
+				ISessionPtr session = listener->sessionManager->NewSession(true, socket);
+				listener->Connected(session);
 			}
 		};
 		typedef std::shared_ptr<TListenAccept> TListenAcceptPtr;
@@ -950,7 +960,7 @@ namespace MurmurBus { namespace IOCP {
 				Verify(TRUE == status);
 				int err = setsockopt(*socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
 				Verify(SOCKET_ERROR != err);
-				ISessionPtr session = listener->sessionManager->NewSession(socket);
+				ISessionPtr session = listener->sessionManager->NewSession(false, socket);
 				listener->Connected(session);
 			}
 		} /*TConnectExQueueLocal*/ connect_queue;
@@ -993,17 +1003,19 @@ namespace MurmurBus { namespace IOCP {
 			void TListenConnect::Connected(ISessionPtr session) {
 				client_count++;
 				
-				if(client_count < 1024) {
-					Connect(intfc, intfc, port);
-					std::cout << "conected: " << session->get_session_id() << ", " <<
-						session->Description() << std::endl;
-				} else
-					std::cout << client_count << " echo sockets connected." << std::endl;
-
-				TMessage message;
-				message["command"] = "echo";
-				message["hops"] = "0";
-				session->Send(message);
+				if(session->IsServerSession()) {
+					TMessage message;
+					message["command"] = "echo";
+					message["hops"] = "0";
+					session->Send(message);
+				} else { // client
+					if(client_count < 1024) {
+						Connect(intfc, intfc, port);
+						std::cout << "conected: " << session->get_session_id() << ", " <<
+							session->Description() << std::endl;
+					} else
+						std::cout << client_count << " echo sockets connected." << std::endl;
+				}
 			}
 		} listener;
 	private:
