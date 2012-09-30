@@ -871,8 +871,8 @@ namespace MurmurBus { namespace IOCP {
 		}
 	}; // TSessionManager
 
-	//////////////////////////////////////////
-	class TListenConnect : public IProcessMessage {
+	//////////////////////
+	class TListenConnect {
 		friend class TListenAccept;
 	private:
 		IProcessMessage *iProcessMessage;
@@ -880,12 +880,25 @@ namespace MurmurBus { namespace IOCP {
 		TListenConnect::TListenConnect();
 	public:
 		TListenConnect::TListenConnect(IIOCPEventedPtr iocp, IProcessMessage *iProcessMessage) : 
-			iocp(iocp), listen_id(0), iProcessMessage(iProcessMessage), connect_queue(iocp, this)
+			iocp(iocp), listen_id(0), iProcessMessage(iProcessMessage), 
+			connect_queue(iocp, this), bridgeIProcessMessage(this)
 		{
 			Verify(NULL != iProcessMessage);
 			Verify(iocp);
-			sessionManager = ISessionManagerPtr(new TSessionManager(this, iocp));
+			sessionManager = ISessionManagerPtr(new TSessionManager(&bridgeIProcessMessage, iocp));
 		}
+	private:
+		friend class TProcessMessage;
+		class TProcessMessage : public IProcessMessage {
+		private:
+			TListenConnect *listenConnect;
+		public:
+			TProcessMessage(TListenConnect *listenConnect) : listenConnect(listenConnect) { }
+		private:
+			void IProcessMessage::Process(__int64 session_id, TMessage &message) {
+				listenConnect->Process(session_id, message);
+			}
+		} bridgeIProcessMessage;
 	public:
 		__int64 /*listen_id*/ Listen(std::string intfc, short port, int accept_depth) {
 			++listen_id;
@@ -937,7 +950,7 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		__int64 listen_id;
 	private:
-		void IProcessMessage::Process(__int64 session_id, TMessage &message) {
+		void Process(__int64 session_id, TMessage &message) {
 			iProcessMessage->Process(session_id, message);
 		}
 	public:
@@ -973,52 +986,43 @@ namespace MurmurBus { namespace IOCP {
 	};
 	typedef std::shared_ptr<TListenConnect> TListenConnectPtr;
 
-	//////////////////////////////////////////
-	class TEchoTest : public IProcessMessage {
+	///////////////////////////////////////////////////////////////////
+	class TEchoTest : private IProcessMessage, private TListenConnect {
+	private:
+		int client_count;
+	private:
+		std::string intfc;
+	private:
+		short port;
 	private:
 		TEchoTest();
 	public:
-		TEchoTest(IIOCPEventedPtr iocp, std::string intfc, short port, int depth) :
-			listener(iocp, intfc, port, depth, this) { }
+		TEchoTest(
+			IIOCPEventedPtr iocp, std::string intfc, short port, int accept_depth
+			) : intfc(intfc), port(port), TListenConnect(iocp, this), client_count(0)
+		{
+			Listen(intfc, port, accept_depth);
+			Connect(intfc, intfc, port);
+		}
 	private:
-		///////////////////////////////////////////////////
-		class TListenConnectEcho : public TListenConnect {
-		private:
-			std::string intfc;
-		private:
-			short port;
-		private:
-			int client_count;
-		private:
-			TListenConnectEcho::TListenConnectEcho();
-		public:
-			TListenConnectEcho(IIOCPEventedPtr iocp, std::string intfc, short port, int accept_depth, IProcessMessage *iProcessMessage) :
-				TListenConnect(iocp, iProcessMessage), intfc(intfc), port(port), client_count(0)
-			{
-				Listen(intfc, port, accept_depth);
-				Connect(intfc, intfc, port);
-			}
-		private:
-			void TListenConnect::Connected(ISessionPtr session) {
-				client_count++;
-				
-				if(session->IsServerSession()) {
-					TMessage message;
-					message["command"] = "echo";
-					message["hops"] = "0";
-					session->Send(message);
-					std::cout << "accepted: " << session->get_session_id() << ", " <<
+		void TListenConnect::Connected(ISessionPtr session) {
+			if(session->IsServerSession()) {
+				TMessage message;
+				message["command"] = "echo";
+				message["hops"] = "0";
+				session->Send(message);
+				std::cout << "accepted: " << session->get_session_id() << ", " <<
+					session->Description() << std::endl;
+			} else { // client
+				if(client_count < 1024) {
+					client_count++;
+					Connect(intfc, intfc, port);
+					std::cout << "conected: " << session->get_session_id() << ", " <<
 						session->Description() << std::endl;
-				} else { // client
-					if(client_count < 1024) {
-						Connect(intfc, intfc, port);
-						std::cout << "conected: " << session->get_session_id() << ", " <<
-							session->Description() << std::endl;
-					} else
-						std::cout << client_count << " echo sockets connected." << std::endl;
-				}
+				} else
+					std::cout << client_count << " echo sockets connected." << std::endl;
 			}
-		} listener;
+		}
 	private:
 		std::stringstream parser;
 	private:
@@ -1032,7 +1036,7 @@ namespace MurmurBus { namespace IOCP {
 			out.str("");
 			out  << hops;
 			message["hops"] = hops;
-			listener.Send(session_id, message);
+			TListenConnect::Send(session_id, message);
 		}
 	};
 
