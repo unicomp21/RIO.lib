@@ -746,7 +746,7 @@ namespace MurmurBus { namespace IOCP {
 		class TSessionSend : private ICompletionResult, public TOverlappedSend {
 			friend class TSession;
 		private:
-			TBytes send_buffer;
+			std::string send_buffer;
 		private:
 			TSession *session;
 		private:
@@ -800,7 +800,7 @@ namespace MurmurBus { namespace IOCP {
 		friend class TSessionSend;
 		//////////////////////////
 	private:
-		TBytes message_builder;
+		std::string message_builder;
 	private:
 		TMessage message;
 	private:
@@ -840,7 +840,7 @@ namespace MurmurBus { namespace IOCP {
 		TSessionManager::TSessionManager();
 	public:
 		TSessionManager::TSessionManager(IProcessMessage *iListenerProcessMessage, IIOCPEventedPtr iocp) : 
-			iListenerProcessMessage(iListenerProcessMessage), iocp(iocp), next_session_id(0)
+			iListenerProcessMessage(iListenerProcessMessage), iocp(iocp), next_session_id(1)
 		{
 			Verify(NULL != iListenerProcessMessage);
 			Verify(iocp);
@@ -985,6 +985,90 @@ namespace MurmurBus { namespace IOCP {
 		virtual void TListenConnect::Connected(ISessionPtr session) = 0;
 	};
 	typedef std::shared_ptr<TListenConnect> TListenConnectPtr;
+
+	//////////////////////////
+	class ISubscribeCallback {
+	public:
+		virtual void Update(std::string topic, TMessage &message) = 0;
+	};
+
+	///////////////
+	class IPubSub {
+	public:
+		virtual void Listen(std::string intfc, short port) = 0;
+	public:
+		virtual void Connect(std::string intfc, std::string remote, short port) = 0;
+	public:
+		virtual void Publish(std::string topic, TMessage &message) = 0;
+	public:
+		virtual void Subscribe(std::string topic, ISubscribeCallback *iSubscribeCallback) = 0;
+	};
+
+	/////////////////////////////////////////////////////////////////////////////////
+	class TPubSub : public IPubSub, private IProcessMessage, private TListenConnect {
+	private:
+		TPubSub();
+	public:
+		TPubSub(IIOCPEventedPtr iocp) : session_id(0), TListenConnect(iocp, this) {
+			payload.reserve(128);
+		}
+	private:
+		void IPubSub::Listen(std::string intfc, short port) {
+			TListenConnect::Listen(intfc, port, 128);
+		}
+	private:
+		TOneShot oneshot_connect;
+	private:
+		void IPubSub::Connect(std::string intfc, std::string remote, short port) {
+			Verify(oneshot_connect);
+			TListenConnect::Connect(intfc, remote, port);
+		}
+	private:
+		std::string payload;
+	private:
+		TMessage envelope;
+	private:
+		__int64 session_id;
+	private:
+		void IPubSub::Publish(std::string topic, TMessage &message) {
+			Verify(0 != session_id);
+			payload.clear();
+			message.Append(payload);
+			envelope.SoftClear();
+			envelope["command"] = "publish";
+			envelope["topic"] = topic;
+			envelope["payload"] = payload;
+			TListenConnect::Send(session_id, envelope);
+		}
+	private:
+		void IPubSub::Subscribe(std::string topic, ISubscribeCallback *iSubscribeCallback) {
+			Verify(NULL != iSubscribeCallback);
+			Verify(0 != session_id);
+			envelope.SoftClear();
+			envelope["command"] = "subscribe";
+			std::stringstream session_id_out(envelope["session_id"]);
+			session_id_out << session_id;
+			TListenConnect::Send(session_id, envelope);
+		}
+	private:
+		std::hash_map<std::string /*topic*/, __int64 /*session_id*/> subscribers;
+	private:
+		std::string command;
+	private:
+		void IProcessMessage::Process(__int64 session_id, TMessage &message) {
+			if(message.TryGet(std::string("command"), command)) {
+				if(command == "publish") {
+					//todo
+				} else if(command == "subscribe") {
+					//todo
+				} else Verify(false);
+			}
+		}
+	private:
+		void TListenConnect::Connected(ISessionPtr session) {
+			session_id = session->get_session_id();
+		}
+	};
 
 	///////////////////////////////////////////////////////////////////
 	class TEchoTest : private IProcessMessage, private TListenConnect {

@@ -36,6 +36,19 @@ namespace MurmurBus {
 	}
 
 	////////////////
+	class TOneShot {
+	private:
+		bool flag;
+	public:
+		operator bool() {
+			if(flag) flag = false;
+			return flag;
+		}
+	public:
+		TOneShot() : flag(false) { }
+	};
+
+	////////////////
 	enum constants {
 		max_msg_size = 1024,
 		max_block_count = 65536
@@ -43,6 +56,12 @@ namespace MurmurBus {
 
 	/////////////////////////////////
 	typedef std::vector<char> TBytes;
+
+	//////////////////////////////////////////////
+	void Copy(TBytes &bytes, std::string &buffer) {
+		buffer.clear();
+		buffer.insert(buffer.begin(), bytes.begin(), bytes.end());
+	}
 
 	/////////////
 	class TUUID {
@@ -105,7 +124,7 @@ namespace MurmurBus {
 	private:
 		std::string in_buffer;
 	public:
-		bool Read(TBytes &buffer, size_t start_offset, size_t *end_offset, __int64 *num) {
+		bool Read(std::string &buffer, size_t start_offset, size_t *end_offset, __int64 *num) {
 			in_buffer.clear();
 			if(start_offset >= buffer.size()) return false;
 			size_t len = buffer[start_offset] - '0';
@@ -125,7 +144,7 @@ namespace MurmurBus {
 	private:
 		std::string out_writer_cache;
 	public:
-		void Append(TBytes &buffer, __int64 val) {
+		void Append(std::string &buffer, __int64 val) {
 			out_writer_cache.clear();
 			std::stringstream out_writer(out_writer_cache);
 			out_writer << val;
@@ -147,7 +166,7 @@ namespace MurmurBus {
 	private:
 		std::string key, val;
 	public:
-		bool Read(TBytes &buffer, size_t start_offset, size_t *end_offset) {
+		bool Read(std::string &buffer, size_t start_offset, size_t *end_offset) {
 			__int64 count = 0;
 			if(!number.Read(buffer, start_offset, &start_offset, &count)) return false;
 			__int64 len_key = 0, len_val = 0;
@@ -170,7 +189,7 @@ namespace MurmurBus {
 			return true;
 		}
 	public:
-		void Append(TBytes &buffer) {
+		void Append(std::string &buffer) {
 			number.Append(buffer, this->size());
 			for(iterator iter = begin(); iter != end(); iter++) {
 				const std::string &key = iter->first;

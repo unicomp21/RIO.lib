@@ -20,7 +20,7 @@ void test_TMessage() {
 	msg["arg2"] = "val2";
 	msg.Dump(std::cout);
 
-	TBytes buffer;
+	std::string buffer;
 	msg.Append(buffer);
 
 	TMessage msg2;
@@ -33,6 +33,8 @@ int _tmain(int argc, _TCHAR* argv[])
 {
 	IIOCPEventedPtr iocp_evented = IIOCPEventedPtr(new TIOCPEvented());
 	TEchoTest echo_test(iocp_evented, "127.0.0.1", 333, 128);
+	TPubSub publisher(iocp_evented);
+
 	for(;;) {
 		iocp_evented->completions_waiting().WaitOne();
 		iocp_evented->completion_port().Flush();
