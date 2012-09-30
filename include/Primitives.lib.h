@@ -13,6 +13,7 @@
 #include <map>
 #include <vector>
 #include <sstream>
+#include <iostream>
 #include <memory>
 #include <rpc.h>
 
@@ -244,6 +245,24 @@ namespace MurmurBus {
 			hIOCP = ::CreateIoCompletionPort(
 				INVALID_HANDLE_VALUE, NULL, 0, 0);
 			Verify(NULL != hIOCP);
+
+			last_tick = ::GetTickCount64();
+		}
+	private:
+		__int64 completion_count;
+	private:
+		unsigned __int64 last_tick;
+	private:
+		void DoStats() {
+			completion_count++;
+			if(completion_count > 10000) {
+				unsigned __int64 tick = ::GetTickCount64();
+				double rate = static_cast<double>(completion_count * 1000);
+				rate /= static_cast<double>(tick - last_tick);
+				std::cout << rate << " completions/s" << std::endl;
+				last_tick = tick;
+				completion_count = 0;
+			}
 		}
 	public:
 		void Attach(HANDLE hChild) {
@@ -262,6 +281,7 @@ namespace MurmurBus {
 			if(TRUE == status) {
 				Verify(NULL != pOverlapped->iCompletion);
 				pOverlapped->iCompletion->Completed(status, byte_count, pOverlapped);
+				DoStats();
 				return true;
 			} else {
 				if(NULL != lpOverlapped) {
