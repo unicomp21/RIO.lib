@@ -9,3 +9,5 @@ Debug/*
 Release/*
 */x64/*/*
 *.user
+*.psess
+*.vspx
