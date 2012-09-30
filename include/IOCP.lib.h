@@ -1008,6 +1008,8 @@ namespace MurmurBus { namespace IOCP {
 					message["command"] = "echo";
 					message["hops"] = "0";
 					session->Send(message);
+					std::cout << "accepted: " << session->get_session_id() << ", " <<
+						session->Description() << std::endl;
 				} else { // client
 					if(client_count < 1024) {
 						Connect(intfc, intfc, port);
