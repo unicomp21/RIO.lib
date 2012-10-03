@@ -1072,7 +1072,7 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		std::hash_map<std::string /*topic*/, __int64 /*session_id*/> subscribers;
 	private:
-		std::string command;
+		std::hash_map<std::string /*topic*/, TMessagePtr> snapshots;
 	private:
 		std::string command_parser;
 	private:

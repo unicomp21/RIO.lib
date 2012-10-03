@@ -223,6 +223,7 @@ namespace MurmurBus {
 			out << std::endl;
 		}
 	}; // TMessage
+	typedef std::shared_ptr<TMessage> TMessagePtr;
 
 	/////////////////////////
 	class TOverlapped;
