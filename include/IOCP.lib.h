@@ -1020,7 +1020,7 @@ namespace MurmurBus { namespace IOCP {
 		TPubSub(IIOCPEventedPtr iocp) : session_id(0), 
 			TListenConnect(iocp, this), iConnectCallback(NULL)
 		{
-			payload.reserve(128);
+			payload_parser.reserve(128);
 		}
 	private:
 		void IPubSub::Listen(std::string intfc, short port) {
@@ -1040,21 +1040,21 @@ namespace MurmurBus { namespace IOCP {
 			TListenConnect::Connect(intfc, remote, port);
 		}
 	private:
-		std::string payload;
+		std::string payload_parser;
 	private:
-		TMessage envelope;
+		TMessage envelope_parser;
 	private:
 		__int64 session_id;
 	private:
 		void IPubSub::Publish(std::string topic, TMessage &message) {
 			Verify(0 != session_id);
-			payload.clear();
-			message.Append(payload);
-			envelope.SoftClear();
-			envelope["command"] = "publish";
-			envelope["topic"] = topic;
-			envelope["payload"] = payload;
-			TListenConnect::Send(session_id, envelope);
+			payload_parser.clear();
+			message.Append(payload_parser);
+			envelope_parser.SoftClear();
+			envelope_parser["command"] = "publish";
+			envelope_parser["topic"] = topic;
+			envelope_parser["payload"] = payload_parser;
+			TListenConnect::Send(session_id, envelope_parser);
 		}
 	private:
 		void IPubSub::Subscribe(
@@ -1063,33 +1063,35 @@ namespace MurmurBus { namespace IOCP {
 		{
 			Verify(NULL != iSubscribeCallback);
 			Verify(0 != session_id);
-			envelope.SoftClear();
-			envelope["command"] = "subscribe";
-			std::stringstream session_id_out(envelope["session_id"]);
+			envelope_parser.SoftClear();
+			envelope_parser["command"] = "subscribe";
+			std::stringstream session_id_out(envelope_parser["session_id"]);
 			session_id_out << session_id;
-			TListenConnect::Send(session_id, envelope);
+			TListenConnect::Send(session_id, envelope_parser);
 		}
 	private:
 		std::hash_map<std::string /*topic*/, __int64 /*session_id*/> subscribers;
 	private:
 		std::string command;
 	private:
-		std::string topic;
+		std::string command_parser;
+	private:
+		std::string topic_parser;
 	private:
 		void IProcessMessage::Process(__int64 session_id, TMessage &message) {
 			if(
-				message.TryGet(std::string("command"), command) &&
-				message.TryGet(std::string("topic"), topic)
+				message.TryGet(std::string("command"), command_parser) &&
+				message.TryGet(std::string("topic"), topic_parser)
 				) 
 			{
-				if(command == "publish") {
+				if(command_parser == "publish") {
 					auto iter = subscribers.find("topic");
 					if(iter != subscribers.end()) {
 						TListenConnect::Send(iter->second, message);
 					} else Verify(false);
-				} else if(command == "subscribe") {
-					Verify(subscribers.find(topic) == subscribers.end());
-					subscribers[topic] = session_id;
+				} else if(command_parser == "subscribe") {
+					Verify(subscribers.find(topic_parser) == subscribers.end());
+					subscribers[topic_parser] = session_id;
 				} else Verify(false);
 			} else Verify(false);
 		}
