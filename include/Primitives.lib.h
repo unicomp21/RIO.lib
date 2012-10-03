@@ -206,6 +206,12 @@ namespace MurmurBus {
 				iter->second.clear();
 		}
 	public:
+		void Merge(TMessage &merge) {
+			for(auto iter = merge.begin(); iter != merge.end(); iter++) {
+				(*this)[iter->first] = iter->second;
+			}
+		}
+	public:
 		bool TryGet(std::string &key, std::string &val) {
 			iterator iter = find(key);
 			if(iter->second.length() > 0) {

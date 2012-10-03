@@ -1072,11 +1072,9 @@ namespace MurmurBus { namespace IOCP {
 	private:
 		std::hash_map<std::string /*topic*/, __int64 /*session_id*/> subscribers;
 	private:
-		std::hash_map<std::string /*topic*/, TMessagePtr> snapshots;
+		std::hash_map<std::string /*topic*/, TMessage /*snap*/> snapshots;
 	private:
-		std::string command_parser;
-	private:
-		std::string topic_parser;
+		std::string command_parser, topic_parser;
 	private:
 		void IProcessMessage::Process(__int64 session_id, TMessage &message) {
 			if(
@@ -1085,13 +1083,26 @@ namespace MurmurBus { namespace IOCP {
 				) 
 			{
 				if(command_parser == "publish") {
-					auto iter = subscribers.find("topic");
+					auto iter = subscribers.find(topic_parser);
 					if(iter != subscribers.end()) {
 						TListenConnect::Send(iter->second, message);
+					} else Verify(false);
+					auto iter2 = snapshots.find(topic_parser);
+					if(iter2 != snapshots.end()) {
+						iter2->second.Merge(message);
 					} else Verify(false);
 				} else if(command_parser == "subscribe") {
 					Verify(subscribers.find(topic_parser) == subscribers.end());
 					subscribers[topic_parser] = session_id;
+					envelope_parser.SoftClear();
+					Send(session_id, envelope_parser);
+					envelope_parser["command"] = "snapshot";
+					payload_parser.clear();
+					auto iter = snapshots.find(topic_parser);
+					if(iter != snapshots.end())
+						iter->second.Append(payload_parser);
+					envelope_parser["payload"] = payload_parser;
+					Send(session_id, envelope_parser);
 				} else Verify(false);
 			} else Verify(false);
 		}
