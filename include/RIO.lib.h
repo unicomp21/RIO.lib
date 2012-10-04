@@ -4,7 +4,6 @@
 #include <set>
 #include <hash_map>
 
-#ifdef RIO
 namespace MurmurBus { namespace RIO {
 	using namespace MurmurBus::IOCP;
 	//////////////////////////////////////
@@ -490,13 +489,16 @@ namespace MurmurBus { namespace RIO {
 			return completion_queue;
 		}
 	public:
-		TEvent completions_waiting;
+		IEventPtr completions_waiting;
 	private:
 		TRioCompletionQueueEvented() { NotImplemented(); }
 	public:
-		TRioCompletionQueueEvented(SOCKET socket, DWORD queue_size) {
+		TRioCompletionQueueEvented(SOCKET socket, DWORD queue_size, IEventPtr completions_waiting) :
+			completions_waiting(completions_waiting) 
+		{
+			Verify(completions_waiting);
 			completion_queue = std::shared_ptr<TRioCompletionQueue>(
-				new TRioCompletionQueue(socket, queue_size, completions_waiting));
+				new TRioCompletionQueue(socket, queue_size, *completions_waiting));
 		}
 	}; // TRioCompletionQueueEvented
 
@@ -701,120 +703,5 @@ namespace MurmurBus { namespace RIO {
 	class IConnectCallback : ICompletionResult
 	{ }; // IConnectCallback
 
-	//////////////////////////
-	class TRioSessionManager {
-	private:
-		std::hash_map<std::string /*uuid*/, TRioSessionPtr> sessions;
-	private:
-		TRioSessionManager() { NotImplemented(); }
-	private:
-		IRecvMessage *iRecvMessage;
-	private:
-		IIOCPEventedPtr iocp;
-	private:
-		std::shared_ptr<TRioCompletionQueueEvented> rio_cq;
-	private:
-		int max_completion_queue;
-	public:
-		TRioSessionManager(IRecvMessage *iRecvMessage, ISessionNotify *iSessionNotify,
-			IIOCPEventedPtr iocp, int max_completion_queue = 1024 * 1024) :
-		iRecvMessage(iRecvMessage), iocp(iocp), max_completion_queue(max_completion_queue)
-		{
-			Verify(NULL != iRecvMessage);
-		}
-	private:
-		void InitCompletionQueue(SOCKET socket) {
-			if(!rio_cq) {
-				rio_cq = std::shared_ptr<TRioCompletionQueueEvented>(
-					new TRioCompletionQueueEvented(socket, max_completion_queue));
-			}
-		}
-	private:
-		friend class TSessionListenerEx;
-		class TRioSessionListenerEx : public TAcceptEx {
-		private:
-			TRioSessionListenerEx() : TAcceptEx(IIOCPEventedPtr(), "", NULL, NULL) { NotImplemented(); }
-		private:
-			TRioSessionManager *rioSessionManager;
-		public:
-			TRioSessionListenerEx(TRioSessionManager *rioSessionManager, 
-				std::string intfc, short port, int depth) :
-			TAcceptEx(rioSessionManager->iocp, intfc, port, depth),
-				rioSessionManager(rioSessionManager) { }
-		private:
-			void TAcceptEx::Accepted(BOOL status, ISocketPtr socket) {
-				std::cout << __FUNCTION__ << std::endl;
-				Verify(TRUE == status);
-				rioSessionManager->NewServerSession(socket);
-			}
-		};
-		typedef std::shared_ptr<TRioSessionListenerEx> TRioSessionListenerExPtr;
-		std::hash_map<std::string, TRioSessionListenerExPtr> listeners;
-	private:
-		void NewServerSession(ISocketPtr socket) {
-			//todo
-		}
-	public:
-		void Listen(std::string intfc, short port, int accept_depth) {
-			std::stringstream key;
-			key << intfc << ":" << port;
-			Verify(listeners.end() == listeners.find(key.str()));
-			TRioSessionListenerExPtr listener = TRioSessionListenerExPtr(
-				new TRioSessionListenerEx(this, intfc, port, accept_depth));
-			listeners[key.str()] = listener;
-			InitCompletionQueue(*listener);
-		}
-	private:
-		///////////////////////////////////////////////
-		class TRioSessionClientEx : public TConnectEx {
-		private:
-			TRioSessionClientEx() : TConnectEx(IIOCPEventedPtr(), "", NULL, NULL) { NotImplemented(); }
-		private:
-			TRioSessionManager *rioSessionManager;
-		public:
-			TRioSessionClientEx(TRioSessionManager *rioSessionManager, 
-				std::string intfc, std::string remote,  short port) : 
-			TConnectEx(rioSessionManager->iocp, intfc, remote, port), 
-				rioSessionManager(rioSessionManager) { }
-		private:
-			void TConnectEx::Connected(BOOL status, ISocketPtr socket) {
-				Verify(TRUE == status);
-				rioSessionManager->NewClientSession(socket);
-			}
-		};
-		typedef std::shared_ptr<TRioSessionClientEx> TRioSessionClientExPtr;
-		////////////////////////////////////////////////////////////////////
-	private:
-		void NewClientSession(ISocketPtr socket) {
-			//todo
-			NotImplemented();
-		}
-	public:
-		void Connect(std::string intfc, std::string remote_address, 
-			short remote_port, IConnectCallback *iConnectCallback) 
-		{
-			std::stringstream key;
-			key << remote_address << ":" << remote_port;
-			Verify(listeners.end() == listeners.find(key.str()));
-			TRioSessionClientExPtr client = TRioSessionClientExPtr(
-				new TRioSessionClientEx(this, intfc, remote_address, remote_port));
-			InitCompletionQueue(*client);
-		}
-	public:
-		void SendMesage(std::string session_id, TMessage &message,
-			ISendMessageCallback *iSendMessageCallback) {
-				//todo
-		}
-	public:
-		void CloseSession(std::string session_id, ICloseSessionCallback *iCloseSessionCallback) {
-			//todo
-		}
-	public:
-		void RecvMessageCallback(IRecvMessage *iRecvMessage) {
-			Verify(NULL != iRecvMessage);
-			this->iRecvMessage = iRecvMessage;
-		}
-	}; // TRioSessionManager
 } /* MurmurBus*/ } /* RIO */
 
-#endif
