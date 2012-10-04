@@ -31,12 +31,13 @@ void test_TMessage() {
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	IIOCPEventedPtr iocp_evented = IIOCPEventedPtr(new TIOCPEvented());
+	IEventPtr events = IEventPtr(new TEvent());
+	IIOCPEventedPtr iocp_evented = IIOCPEventedPtr(new TIOCPEvented(events));
 	TEchoTest echo_test(iocp_evented, "127.0.0.1", 333, 128);
 	TPubSub publisher(iocp_evented);
 
 	for(;;) {
-		iocp_evented->completions_waiting().WaitOne();
+		events->WaitOne();
 		iocp_evented->completion_port().Flush();
 	}
 

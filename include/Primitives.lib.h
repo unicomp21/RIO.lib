@@ -48,6 +48,17 @@ namespace MurmurBus {
 		TOneShot() : flag(false) { }
 	};
 
+	//////////////
+	class IEvent {
+	public:
+		virtual operator HANDLE() = 0;
+	public:
+		virtual void WaitOne() = 0;
+	public:
+		virtual ~IEvent() { }
+	};
+	typedef std::shared_ptr<IEvent> IEventPtr;
+
 	////////////////
 	enum constants {
 		max_msg_size = 1024,
@@ -89,7 +100,7 @@ namespace MurmurBus {
 	}; // TUUID
 
 	//////////////
-	class TEvent {
+	class TEvent : public IEvent {
 	private:
 		HANDLE hEvent;
 	public:
@@ -97,10 +108,10 @@ namespace MurmurBus {
 			hEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
 			Verify(NULL != hEvent);
 		}
-	public:
-		operator HANDLE() { return hEvent; }
-	public:
-		void WaitOne() {
+	private:
+		IEvent::operator HANDLE() { return hEvent; }
+	private:
+		void IEvent::WaitOne() {
 			DWORD wait = ::WaitForSingleObject(hEvent, INFINITE);
 			Verify(WAIT_OBJECT_0 == wait);
 		}
@@ -377,7 +388,7 @@ namespace MurmurBus {
 	////////////////////
 	class IIOCPEvented {
 	public:
-		virtual TEvent &completions_waiting() = 0;
+		virtual operator HANDLE() = 0;
 	public:
 		virtual TIOCP &completion_port() = 0;
 	}; // IIOCPEvented

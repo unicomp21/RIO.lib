@@ -63,9 +63,13 @@ namespace MurmurBus { namespace IOCP {
 	//////////////////////////////////////////
 	class TIOCPEvented : public IIOCPEvented {
 	private:
-		TEvent _completions_waiting;
+		TIOCPEvented();
+	public:
+		TIOCPEvented(IEventPtr completions_waiting) : completions_waiting(completions_waiting) { }
 	private:
-		TEvent &IIOCPEvented::completions_waiting() { return _completions_waiting; }
+		IEventPtr completions_waiting;
+	private:
+		IIOCPEvented::operator HANDLE() { return *completions_waiting; }
 	private:
 		TIOCP _completion_port;
 	private:
@@ -484,7 +488,7 @@ namespace MurmurBus { namespace IOCP {
 		}
 	private:
 		void TAcceptEx::PostAccept() {
-			TOverlappedListener *overlapped_listener = new TOverlappedListener(this, iocp->completions_waiting());
+			TOverlappedListener *overlapped_listener = new TOverlappedListener(this, *iocp);
 			BOOL check = acceptor->AcceptEx(*overlapped_listener->acceptee, 
 				&overlapped_listener->addresses_buffer[0], 0,
 				TOverlappedListener::address_reserve, TOverlappedListener::address_reserve, 
@@ -540,7 +544,7 @@ namespace MurmurBus { namespace IOCP {
 			remote_addr.sin_family = AF_INET;
 			remote_addr.sin_port = ::htons(port);
 
-			connect_notify = std::shared_ptr<TOverlapped>(new TOverlapped(this, iocp->completions_waiting()));
+			connect_notify = std::shared_ptr<TOverlapped>(new TOverlapped(this, *iocp));
 
 			check = connector->ConnectEx(reinterpret_cast<LPSOCKADDR>(&remote_addr), sizeof(remote_addr),
 				NULL, 0, NULL, *connect_notify);
@@ -719,7 +723,7 @@ namespace MurmurBus { namespace IOCP {
 			TSessionRecv::TSessionRecv();
 		public:
 			TSessionRecv::TSessionRecv(ISocketPtr socket, TSession *session) : 
-				socket(socket), TOverlappedRecv(this, session->iocp->completions_waiting()),
+				socket(socket), TOverlappedRecv(this, *session->iocp),
 				session(session), recv_buffer(constants::max_msg_size, 0) { }
 		private:
 			void TSessionRecv::PostRecv() {
@@ -757,7 +761,7 @@ namespace MurmurBus { namespace IOCP {
 			TSessionSend::TSessionSend();
 		public:
 			TSessionSend::TSessionSend(ISocketPtr socket, TSession *session) : pending(false),
-				socket(socket), TOverlappedSend(this, session->iocp->completions_waiting()),
+				socket(socket), TOverlappedSend(this, *session->iocp),
 				session(session)
 			{ 
 				send_buffer.reserve(constants::max_msg_size);
