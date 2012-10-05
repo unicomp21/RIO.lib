@@ -7,6 +7,7 @@
 #include <sstream>
 #include <hash_map>
 #include <iostream>
+#include <set>
 
 namespace MurmurBus { namespace IOCP {
 
@@ -1014,7 +1015,10 @@ namespace MurmurBus { namespace IOCP {
 		virtual void Publish(std::string topic, TMessage &message) = 0;
 	public:
 		virtual void Subscribe(std::string topic, ISubscribeCallback *iSubscribeCallback) = 0;
+	public:
+		virtual ~IPubSub() { }
 	};
+	typedef std::shared_ptr<IPubSub> IPubSubPtr;
 
 	/////////////////////////////////////////////////////////////////////////////////
 	class TPubSub : public IPubSub, private IProcessMessage, private TListenConnect {
@@ -1099,8 +1103,9 @@ namespace MurmurBus { namespace IOCP {
 						iter_snapshot->second.Merge(message);
 					} else Verify(false);
 				} else if(command_parser == "subscribe") {
-					Verify(subscribers.find(topic_parser) == subscribers.end());
-					subscribers[topic_parser] = session_id;
+					if(subscribers.find(topic_parser) == subscribers.end())
+						subscribers[topic_parser] = TSubscribers();
+					subscribers[topic_parser].insert(session_id);
 					envelope_parser.SoftClear();
 					Send(session_id, envelope_parser);
 					envelope_parser["command"] = "snapshot";
