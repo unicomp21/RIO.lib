@@ -1074,7 +1074,8 @@ namespace MurmurBus { namespace IOCP {
 			TListenConnect::Send(session_id, envelope_parser);
 		}
 	private:
-		std::hash_map<std::string /*topic*/, __int64 /*session_id*/> subscribers;
+		typedef std::set<__int64> TSubscribers;
+		std::hash_map<std::string /*topic*/, TSubscribers /*session_id*/> subscribers;
 	private:
 		std::hash_map<std::string /*topic*/, TMessage /*snap*/> snapshots;
 	private:
@@ -1087,13 +1088,15 @@ namespace MurmurBus { namespace IOCP {
 				) 
 			{
 				if(command_parser == "publish") {
-					auto iter = subscribers.find(topic_parser);
-					if(iter != subscribers.end()) {
-						TListenConnect::Send(iter->second, message);
+					auto iter_subscribers = subscribers.find(topic_parser);
+					if(iter_subscribers != subscribers.end()) {
+						auto iter_subscriber = iter_subscribers->second.begin();
+						for(; iter_subscriber != iter_subscribers->second.end(); iter_subscriber++)
+							TListenConnect::Send(*iter_subscriber, message);
 					} else Verify(false);
-					auto iter2 = snapshots.find(topic_parser);
-					if(iter2 != snapshots.end()) {
-						iter2->second.Merge(message);
+					auto iter_snapshot = snapshots.find(topic_parser);
+					if(iter_snapshot != snapshots.end()) {
+						iter_snapshot->second.Merge(message);
 					} else Verify(false);
 				} else if(command_parser == "subscribe") {
 					Verify(subscribers.find(topic_parser) == subscribers.end());
