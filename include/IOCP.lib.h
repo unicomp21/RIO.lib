@@ -1178,4 +1178,22 @@ namespace MurmurBus { namespace IOCP {
 		}
 	};
 
+	///////////////////////////////////////////////////////
+	class TPubSubTest : private IPubSub::IConnectCallback {
+	private:
+		IPubSubPtr server;
+	private:
+		IPubSubPtr client;
+	public:
+		TPubSubTest(IIOCPEventedPtr iocp) {
+			server = IPubSubPtr(new TPubSub(iocp));
+			server->Listen("127.0.0.1", 333);
+			client = IPubSubPtr(new TPubSub(iocp));
+			client->Connect("127.0.0.1", "127.0.0.1", 333, this);
+		}
+	private:
+		void IPubSub::IConnectCallback::Connected() {
+			//todo
+		}
+	};
 } /*MurmurBus*/ } /* IOCP */

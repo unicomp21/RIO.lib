@@ -29,8 +29,7 @@ void test_TMessage() {
 	msg2.Dump(std::cout);
 }
 
-int _tmain(int argc, _TCHAR* argv[])
-{
+void TestEcho() {
 	IEventPtr events = IEventPtr(new TEvent());
 	IIOCPEventedPtr iocp_evented = IIOCPEventedPtr(new TIOCPEvented(events));
 	TEchoTest echo_test(iocp_evented, "127.0.0.1", 333, 128);
@@ -40,6 +39,21 @@ int _tmain(int argc, _TCHAR* argv[])
 		events->WaitOne();
 		iocp_evented->completion_port().Flush();
 	}
+}
 
+void TestPubSub() {
+	IEventPtr events = IEventPtr(new TEvent());
+	IIOCPEventedPtr iocp_evented = IIOCPEventedPtr(new TIOCPEvented(events));
+	TPubSubTest test(iocp_evented);
+
+	for(;;) {
+		events->WaitOne();
+		iocp_evented->completion_port().Flush();
+	}
+}
+
+int _tmain(int argc, _TCHAR* argv[])
+{
+	TestEcho();
 	return 0;
 }
