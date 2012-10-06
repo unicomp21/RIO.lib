@@ -1153,7 +1153,7 @@ namespace MurmurBus {
 				std::cout << "accepted: " << session->get_session_id() << ", " <<
 					session->Description() << std::endl;
 			} else { // client
-				if(client_count < 1024) {
+				if(client_count < 512) {
 					client_count++;
 					Connect(intfc, intfc, port);
 					std::cout << "conected: " << session->get_session_id() << ", " <<
