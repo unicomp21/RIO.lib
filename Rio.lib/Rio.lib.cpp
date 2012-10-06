@@ -32,7 +32,6 @@ void TestEcho() {
 	IEventPtr events = IEventPtr(new TEvent());
 	IIOCPEventedPtr iocp_evented = IIOCPEventedPtr(new TIOCPEvented(events));
 	TEchoTest echo_test(iocp_evented, "127.0.0.1", 333, 128);
-	TPubSub publisher(iocp_evented);
 
 	for(;;) {
 		events->WaitOne();
@@ -43,7 +42,6 @@ void TestEcho() {
 void TestPubSub() {
 	IEventPtr events = IEventPtr(new TEvent());
 	IIOCPEventedPtr iocp_evented = IIOCPEventedPtr(new TIOCPEvented(events));
-	TPubSubTest test(iocp_evented);
 
 	for(;;) {
 		events->WaitOne();

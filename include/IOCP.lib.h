@@ -554,7 +554,10 @@ namespace MurmurBus {
 		}
 	private:
 		void ICompletionResult::Completed(BOOL status, DWORD byte_count, TOverlapped *overlapped) {
+			Verify(TRUE == status);
 			Verify(0 == byte_count);
+			int err = setsockopt(*connector, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
+			Verify(SOCKET_ERROR != err);
 			Connected(status, connector);
 		}
 	protected:
@@ -975,8 +978,6 @@ namespace MurmurBus {
 		private:
 			void TConnectExQueue::Connected(BOOL status, ISocketPtr socket) {
 				Verify(TRUE == status);
-				int err = setsockopt(*socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0);
-				Verify(SOCKET_ERROR != err);
 				ISessionPtr session = listener->sessionManager->NewSession(false, socket);
 				listener->Connected(session);
 			}
@@ -1020,12 +1021,12 @@ namespace MurmurBus {
 	};
 	typedef std::shared_ptr<IPubSub> IPubSubPtr;
 
-	/////////////////////////////////////////////////////////////////////////////////
-	class TPubSub : public IPubSub, private IProcessMessage, private TListenConnect {
+	////////////////////////////////////////////////////////////////////////////////////
+	class TPubSubHub : public IPubSub, private IProcessMessage, private TListenConnect {
 	private:
-		TPubSub();
+		TPubSubHub();
 	public:
-		TPubSub(IIOCPEventedPtr iocp) : session_id(0), 
+		TPubSubHub(IIOCPEventedPtr iocp) : session_id(0), 
 			TListenConnect(iocp, this), iConnectCallback(NULL)
 		{
 			payload_parser.reserve(128);
@@ -1180,16 +1181,8 @@ namespace MurmurBus {
 
 	///////////////////////////////////////////////////////
 	class TPubSubTest : private IPubSub::IConnectCallback {
-	private:
-		IPubSubPtr server;
-	private:
-		IPubSubPtr client;
 	public:
 		TPubSubTest(IIOCPEventedPtr iocp) {
-			server = IPubSubPtr(new TPubSub(iocp));
-			server->Listen("127.0.0.1", 333);
-			client = IPubSubPtr(new TPubSub(iocp));
-			client->Connect("127.0.0.1", "127.0.0.1", 333, this);
 		}
 	private:
 		void IPubSub::IConnectCallback::Connected() {
