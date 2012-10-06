@@ -398,4 +398,4 @@ namespace MurmurBus {
 	}; // IIOCPEvented
 
 	typedef std::shared_ptr<IIOCPEvented> IIOCPEventedPtr;
-}
+} /* MurmurBus*/

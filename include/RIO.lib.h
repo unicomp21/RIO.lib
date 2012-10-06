@@ -4,8 +4,7 @@
 #include <set>
 #include <hash_map>
 
-namespace MurmurBus { namespace RIO {
-	using namespace MurmurBus::IOCP;
+namespace MurmurBus {
 	//////////////////////////////////////
 	class TRioSocketTcp : public TSocket {
 		TRioSocketTcp() : TSocket(SOCK_STREAM, IPPROTO_TCP, WSA_FLAG_REGISTERED_IO) {
@@ -703,5 +702,5 @@ namespace MurmurBus { namespace RIO {
 	class IConnectCallback : ICompletionResult
 	{ }; // IConnectCallback
 
-} /* MurmurBus*/ } /* RIO */
+} /* MurmurBus*/
 

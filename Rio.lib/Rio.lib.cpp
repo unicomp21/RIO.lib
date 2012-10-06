@@ -7,7 +7,6 @@
 #include <iostream>
 
 using namespace MurmurBus;
-using namespace MurmurBus::IOCP;
 
 void test_TUUID() {
 	TUUID test;

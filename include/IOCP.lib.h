@@ -9,7 +9,7 @@
 #include <iostream>
 #include <set>
 
-namespace MurmurBus { namespace IOCP {
+namespace MurmurBus {
 
 	////////////////
 	class ISession {
@@ -1196,4 +1196,4 @@ namespace MurmurBus { namespace IOCP {
 			//todo
 		}
 	};
-} /*MurmurBus*/ } /* IOCP */
+} /* MurmurBus*/
