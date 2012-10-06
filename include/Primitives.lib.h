@@ -41,11 +41,15 @@ namespace MurmurBus {
 		bool flag;
 	public:
 		operator bool() {
-			if(flag) flag = false;
-			return flag;
+			if(flag) {
+				flag = false;
+				return true;
+			} else {
+				return flag;
+			}
 		}
 	public:
-		TOneShot() : flag(false) { }
+		TOneShot() : flag(true) { }
 	};
 
 	//////////////
