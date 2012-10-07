@@ -950,7 +950,7 @@ namespace MurmurBus {
 					reinterpret_cast<char*>(&val), sizeof(val));
 				Verify(SOCKET_ERROR != err);
 				ISessionPtr session = listener->sessionManager->NewSession(true, socket);
-				listener->Connected(session);
+				listener->Connected(status, session);
 			}
 		};
 		typedef std::shared_ptr<TListenAccept> TListenAcceptPtr;
@@ -979,7 +979,7 @@ namespace MurmurBus {
 			void TConnectExQueue::Connected(BOOL status, ISocketPtr socket) {
 				Verify(TRUE == status);
 				ISessionPtr session = listener->sessionManager->NewSession(false, socket);
-				listener->Connected(session);
+				listener->Connected(status, session);
 			}
 		} /*TConnectExQueueLocal*/ connect_queue;
 		friend class TConnectExQueueLocal;
@@ -988,7 +988,7 @@ namespace MurmurBus {
 			connect_queue.Connect(intfc, remote, port);
 		}
 	private:
-		virtual void TListenConnect::Connected(ISessionPtr session) = 0;
+		virtual void TListenConnect::Connected(BOOL status, ISessionPtr session) = 0;
 	};
 	typedef std::shared_ptr<TListenConnect> TListenConnectPtr;
 
@@ -1120,7 +1120,7 @@ namespace MurmurBus {
 			} else Verify(false);
 		}
 	private:
-		void TListenConnect::Connected(ISessionPtr session) {
+		void TListenConnect::Connected(BOOL status, ISessionPtr session) {
 			session_id = session->get_session_id();
 		}
 	};
@@ -1144,7 +1144,7 @@ namespace MurmurBus {
 			Connect(intfc, intfc, port);
 		}
 	private:
-		void TListenConnect::Connected(ISessionPtr session) {
+		void TListenConnect::Connected(BOOL status, ISessionPtr session) {
 			if(session->IsServerSession()) {
 				TMessage message;
 				message["command"] = "echo";
