@@ -858,7 +858,8 @@ namespace MurmurBus {
 	private:
 		ISessionPtr ISessionManager::NewSession(bool isServerSession, ISocketPtr socket) {
 			Verify(socket);
-			ISessionPtr session = ISessionPtr(new TSession(isServerSession, iocp, ++next_session_id, this, socket));
+			ISessionPtr session = ISessionPtr(new TSession(
+				isServerSession, iocp, ++next_session_id, this, socket));
 			sessions[session->get_session_id()] = session;
 			//if(session->get_session_id() % 100 == 0) std::cout << "NewSession: " << session->get_session_id() << std::endl;
 			return session;
@@ -879,8 +880,14 @@ namespace MurmurBus {
 		}
 	}; // TSessionManager
 
-	//////////////////////
-	class TListenConnect {
+	/////////////////////////
+	class ISessionConnected {
+	public:
+		virtual void Connected(BOOL status, ISessionPtr session) = 0;
+	};
+
+	//////////////////////////////////////////////////
+	class TListenConnect : private ISessionConnected {
 		friend class TListenAccept;
 	private:
 		IProcessMessage *iProcessMessage;
@@ -889,7 +896,7 @@ namespace MurmurBus {
 	public:
 		TListenConnect::TListenConnect(IIOCPEventedPtr iocp, IProcessMessage *iProcessMessage) : 
 			iocp(iocp), listen_id(0), iProcessMessage(iProcessMessage), 
-			connect_queue(iocp, this), bridgeIProcessMessage(this)
+			connect_queue(iocp, this, this), bridgeIProcessMessage(this)
 		{
 			Verify(NULL != iProcessMessage);
 			Verify(iocp);
@@ -911,7 +918,7 @@ namespace MurmurBus {
 		__int64 /*listen_id*/ Listen(std::string intfc, short port, int accept_depth) {
 			++listen_id;
 			acceptors[listen_id] = TListenAcceptPtr(
-				new TListenAccept(iocp, intfc, port, accept_depth, this));
+				new TListenAccept(iocp, intfc, port, accept_depth, this, this));
 			return listen_id;
 		}
 	public:
@@ -933,13 +940,17 @@ namespace MurmurBus {
 		private:
 			TListenConnect *listener;
 		private:
+			ISessionConnected *iSessionConnected;
+		private:
 			TListenAccept::TListenAccept();
 		private:
 			TListenAccept(
 				IIOCPEventedPtr iocp, std::string intfc, short port, 
-				int depth, TListenConnect *listener
-				) :	TAcceptEx(iocp, intfc, port, depth), listener(listener)
+				int depth, TListenConnect *listener, ISessionConnected *iSessionConnected
+				) :	TAcceptEx(iocp, intfc, port, depth), listener(listener), 
+				iSessionConnected(iSessionConnected)
 			{ 
+				Verify(NULL != iSessionConnected);
 				Verify(NULL != listener);
 			}
 		private:
@@ -950,7 +961,7 @@ namespace MurmurBus {
 					reinterpret_cast<char*>(&val), sizeof(val));
 				Verify(SOCKET_ERROR != err);
 				ISessionPtr session = listener->sessionManager->NewSession(true, socket);
-				listener->Connected(status, session);
+				iSessionConnected->Connected(status, session);
 			}
 		};
 		typedef std::shared_ptr<TListenAccept> TListenAcceptPtr;
@@ -971,15 +982,24 @@ namespace MurmurBus {
 		private:
 			TListenConnect *listener;
 		private:
+			ISessionConnected *iSessionConnected;
+		private:
 			TConnectExQueueLocal::TConnectExQueueLocal();
 		public:
-			TConnectExQueueLocal::TConnectExQueueLocal(IIOCPEventedPtr iocp, TListenConnect *listener) : 
-				TConnectExQueue(iocp), listener(listener) { }
+			TConnectExQueueLocal::TConnectExQueueLocal(
+				IIOCPEventedPtr iocp, TListenConnect *listener, 
+				ISessionConnected *iSessionConnected
+				) : TConnectExQueue(iocp), listener(listener), 
+				iSessionConnected(iSessionConnected) 
+			{ 
+				Verify(NULL != iSessionConnected);
+				Verify(NULL != listener);
+			}
 		private:
 			void TConnectExQueue::Connected(BOOL status, ISocketPtr socket) {
 				Verify(TRUE == status);
 				ISessionPtr session = listener->sessionManager->NewSession(false, socket);
-				listener->Connected(status, session);
+				iSessionConnected->Connected(status, session);
 			}
 		} /*TConnectExQueueLocal*/ connect_queue;
 		friend class TConnectExQueueLocal;
@@ -988,7 +1008,7 @@ namespace MurmurBus {
 			connect_queue.Connect(intfc, remote, port);
 		}
 	private:
-		virtual void TListenConnect::Connected(BOOL status, ISessionPtr session) = 0;
+		virtual void ISessionConnected::Connected(BOOL status, ISessionPtr session) = 0;
 	};
 	typedef std::shared_ptr<TListenConnect> TListenConnectPtr;
 
