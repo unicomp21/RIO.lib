@@ -347,6 +347,26 @@ namespace MurmurBus {
 		}
 	}; // TIOCP
 
+	////////////////
+	class ISession {
+	public:
+		virtual __int64 get_session_id() = 0;
+	public:
+		virtual void Send(TMessage &message) = 0;
+	public:
+		virtual bool IsServerSession() = 0;
+	public:
+		virtual std::string Description() = 0;
+	}; // ISession
+	typedef std::shared_ptr<ISession> ISessionPtr;
+
+	/////////////////////////
+	class ISessionConnected {
+	public:
+		virtual void Connected(BOOL status, ISessionPtr session) = 0;
+	};
+	typedef std::shared_ptr<ISessionConnected> ISessionConnectedPtr;
+
 	///////////////
 	class ISocket {
 	public:
@@ -383,6 +403,8 @@ namespace MurmurBus {
 		virtual std::string get_name() = 0;
 	public:
 		virtual std::string get_peername() = 0;
+	public:
+		virtual ISessionPtr &get_session() = 0;
 	public:
 		virtual ~ISocket() { }
 	}; // ISocket

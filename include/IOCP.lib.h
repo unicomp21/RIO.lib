@@ -11,19 +11,6 @@
 
 namespace MurmurBus {
 
-	////////////////
-	class ISession {
-	public:
-		virtual __int64 get_session_id() = 0;
-	public:
-		virtual void Send(TMessage &message) = 0;
-	public:
-		virtual bool IsServerSession() = 0;
-	public:
-		virtual std::string Description() = 0;
-	}; // ISession
-	typedef std::shared_ptr<ISession> ISessionPtr;
-
 	///////////////////////
 	class ISessionManager {
 	public:
@@ -402,6 +389,10 @@ namespace MurmurBus {
 			return out.str();
 		}
 	private:
+		ISessionPtr session;
+	private:
+		ISessionPtr &ISocket::get_session() { return session; }
+	private:
 		ISocket::operator HANDLE() { return reinterpret_cast<HANDLE>(hSocket); }
 	private:
 		ISocket::operator SOCKET() { return hSocket; }
@@ -605,9 +596,12 @@ namespace MurmurBus {
 	public:
 		virtual void TConnectExQueue::Connected(BOOL status, ISocketPtr socket) = 0;
 	public:
-		void TConnectExQueue::Connect(std::string intfc, std::string remote, short port) {
+		void TConnectExQueue::Connect(
+			std::string intfc, std::string remote, short port
+			) {
 			next_id++;
-			pending[next_id] = TConnectExClientPtr(new TConnectExClient(next_id, iocp, intfc, remote, port, this));
+			pending[next_id] = TConnectExClientPtr(new TConnectExClient(
+				next_id, iocp, intfc, remote, port, this));
 		}
 	};
 
@@ -879,12 +873,6 @@ namespace MurmurBus {
 			iListenerProcessMessage->Process(session_id, message);
 		}
 	}; // TSessionManager
-
-	/////////////////////////
-	class ISessionConnected {
-	public:
-		virtual void Connected(BOOL status, ISessionPtr session) = 0;
-	};
 
 	//////////////////////////////////////////////////
 	class TListenConnect : private ISessionConnected {
