@@ -14,7 +14,7 @@ namespace MurmurBus {
 	///////////////////////
 	class ISessionManager {
 	public:
-		virtual ISessionPtr NewSession(bool isServerSession, ISocketPtr socket) = 0;
+		virtual ISessionPtr NewSession(BOOL status, bool isServerSession, ISocketPtr socket) = 0;
 	public:
 		virtual bool Send(__int64 session_id, TMessage &message) = 0;
 	public:
@@ -389,9 +389,9 @@ namespace MurmurBus {
 			return out.str();
 		}
 	private:
-		ISessionPtr session;
+		ISessionConnectedPtr session;
 	private:
-		ISessionPtr &ISocket::get_session() { return session; }
+		ISessionConnectedPtr &ISocket::get_session_connected() { return session; }
 	private:
 		ISocket::operator HANDLE() { return reinterpret_cast<HANDLE>(hSocket); }
 	private:
@@ -850,12 +850,14 @@ namespace MurmurBus {
 	private:
 		__int64 next_session_id;
 	private:
-		ISessionPtr ISessionManager::NewSession(bool isServerSession, ISocketPtr socket) {
+		ISessionPtr ISessionManager::NewSession(BOOL status, bool isServerSession, ISocketPtr socket) {
 			Verify(socket);
 			ISessionPtr session = ISessionPtr(new TSession(
 				isServerSession, iocp, ++next_session_id, this, socket));
 			sessions[session->get_session_id()] = session;
 			//if(session->get_session_id() % 100 == 0) std::cout << "NewSession: " << session->get_session_id() << std::endl;
+			if(socket->get_session_connected()) 
+				socket->get_session_connected()->Connected(status, session);
 			return session;
 		}
 	private:
@@ -948,7 +950,7 @@ namespace MurmurBus {
 				int err = setsockopt(*socket, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, 
 					reinterpret_cast<char*>(&val), sizeof(val));
 				Verify(SOCKET_ERROR != err);
-				ISessionPtr session = listener->sessionManager->NewSession(true, socket);
+				ISessionPtr session = listener->sessionManager->NewSession(status, true, socket);
 				iSessionConnected->Connected(status, session);
 			}
 		};
@@ -986,7 +988,7 @@ namespace MurmurBus {
 		private:
 			void TConnectExQueue::Connected(BOOL status, ISocketPtr socket) {
 				Verify(TRUE == status);
-				ISessionPtr session = listener->sessionManager->NewSession(false, socket);
+				ISessionPtr session = listener->sessionManager->NewSession(status, false, socket);
 				iSessionConnected->Connected(status, session);
 			}
 		} /*TConnectExQueueLocal*/ connect_queue;

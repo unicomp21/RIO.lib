@@ -404,7 +404,7 @@ namespace MurmurBus {
 	public:
 		virtual std::string get_peername() = 0;
 	public:
-		virtual ISessionPtr &get_session() = 0;
+		virtual ISessionConnectedPtr &get_session_connected() = 0;
 	public:
 		virtual ~ISocket() { }
 	}; // ISocket
